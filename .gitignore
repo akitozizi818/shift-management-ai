@@ -56,3 +56,4 @@ docker-compose.override.yml
 *.tgz
 *.tar.gz
 .cache/
+credentials/
