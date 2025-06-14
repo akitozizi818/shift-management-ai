@@ -1,0 +1,56 @@
+{
+  "name": "shift-management-ai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "next.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
+    "type-check": "tsc --noEmit",
+    "docker:dev": "docker-compose up -d",
+    "docker:build": "docker build -t shift-management-ai .",
+    "firebase:emulators": "firebase emulators:start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/vertexai": "^1.10.0",
+    "@hookform/resolvers": "^5.1.1",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "axios": "^1.9.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^16.5.0",
+    "firebase": "^11.9.1",
+    "firebase-admin": "^13.4.0",
+    "lucide-react": "^0.515.0",
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.57.0",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.1",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.29.0",
+    "eslint-config-next": "^15.3.3",
+    "eslint-config-prettier": "^10.1.5",
+    "postcss": "^8.5.5",
+    "prettier": "^3.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3"
+  }
+}
