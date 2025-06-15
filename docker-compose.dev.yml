@@ -15,9 +15,11 @@ services:
     volumes:
       - .:/app
       - firebase_data:/app/.firebase
+    env_file:
+      - .env
     environment:
-      - FIREBASE_PROJECT_ID=shift-management-ai
-      - FIREBASE_TOKEN=${FIREBASE_TOKEN:-}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_TOKEN=${FIREBASE_TOKEN}
     networks:
       - app-network
     healthcheck:
@@ -26,7 +28,23 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-
+  # ngrok Service（公式Dockerイメージを使用）
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok-tunnel
+    env_file:
+      - .env
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml:ro
+    command: ["start", "--all", "--config", "/etc/ngrok.yml"]
+    networks:
+      - app-network
+    depends_on:
+      app-dev:
+        condition: service_started
+    restart: unless-stopped
   # Next.js Application Service
   app-dev:
     build:
@@ -40,11 +58,13 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.next
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - FIRESTORE_EMULATOR_HOST=firebase-emulator:8080
-      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
-      - FIREBASE_PROJECT_ID=shift-management-ai
+      - NODE_ENV=${NODE_ENV}
+      - FIRESTORE_EMULATOR_HOST=${FIRESTORE_EMULATOR_HOST}
+      - FIREBASE_AUTH_EMULATOR_HOST=${FIREBASE_AUTH_EMULATOR_HOST}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
       - NEXT_TELEMETRY_DISABLED=1
     depends_on:
       firebase-emulator:

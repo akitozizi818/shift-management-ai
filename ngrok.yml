@@ -1,0 +1,14 @@
+version: "2"
+
+tunnels:
+  line-webhook:
+    addr: shift-management-ai-dev:3000
+    proto: http
+    inspect: true
+    schemes: ["https"]
+
+region: jp
+console_ui: false
+log_level: info
+log: stdout
+update_check: false

@@ -1,6 +1,7 @@
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
+
 async function testFirebaseDocker() {
   try {
     console.log('🔄 Docker環境 Firebase Emulator接続テスト開始...');
@@ -13,7 +14,7 @@ async function testFirebaseDocker() {
     
     // Firebase Admin SDK初期化（Emulator用）
     const app = initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'demo-project',
+      projectId: process.env.FIREBASE_PROJECT_ID ,
     });
     
     const db = getFirestore(app);

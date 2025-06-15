@@ -1,5 +1,4 @@
 const { VertexAI } = require('@google-cloud/vertexai');
-require('dotenv').config({ path: '.env.local' });
 
 async function testVertexAI() {
   console.log('🔄 Vertex AI接続テスト開始...');
@@ -7,11 +6,11 @@ async function testVertexAI() {
   try {
     // 環境変数確認
     console.log('プロジェクトID:', process.env.VERTEX_AI_PROJECT_ID);
-    console.log('リージョン:', process.env.VERTEX_AI_LOCATION || 'asia-northeast1');
+    console.log('リージョン:', process.env.VERTEX_AI_LOCATION );
     
     const vertexAI = new VertexAI({
       project: process.env.VERTEX_AI_PROJECT_ID,
-      location: process.env.VERTEX_AI_LOCATION || 'asia-northeast1',
+      location: process.env.VERTEX_AI_LOCATION ,
     });
     
     const model = vertexAI.preview.getGenerativeModel({
