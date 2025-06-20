@@ -1,14 +1,15 @@
 "use client";
+
 import React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { CalendarRange, PencilRuler, Users2 } from "lucide-react";
+import { CalendarRange, PencilRuler} from "lucide-react";
 import dynamic from "next/dynamic";
 
 const MotionDiv = dynamic(
   () => import("framer-motion").then((mod) => mod.motion.div),
   { ssr: false }
 );
+
 function MenuCard({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
   return (
     <Link href={href} className="group">
@@ -24,26 +25,24 @@ function MenuCard({ href, icon: Icon, label }: { href: string; icon: React.Eleme
   );
 }
 
-/* ===================================================================
- * Admin top page (/admin)
- * =================================================================*/
-export default function AdminHomePage() {
+export default function MemberHomePage() {
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center py-16 px-4">
       <MotionDiv
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-xl w-full space-y-8"
+        className="max-w-md w-full space-y-8"
       >
-        <h1 className="text-center text-3xl font-bold text-gray-900">シフト管理 (店長)</h1>
-        <div className="grid grid-cols-3 gap-6">
-          <MenuCard href="/admin/shiftfinal"     icon={CalendarRange} label="確定シフト" />
-          <MenuCard href="/admin/shiftcreate"    icon={PencilRuler}   label="シフトの作成" />
-          <MenuCard href="/admin/shiftrequests"  icon={Users2}        label="バイトの希望一覧" />
+        <h1 className="text-center text-3xl font-bold text-gray-900">シフト確認・希望</h1>
+        <div className="grid grid-cols-2 gap-6">
+          <MenuCard href="/member/shiftschedule" icon={CalendarRange} label="確定シフト" />
+          <MenuCard href="/member/shiftrequests" icon={PencilRuler} label="シフト希望の提出" />
         </div>
       </MotionDiv>
     </main>
   );
 }
+
+
 
