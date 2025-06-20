@@ -36,7 +36,7 @@ function Page() {
         <div style={topStyle}>
             <h1 style={titleStyle}>お店のルール例</h1>
             <div style={buttonStyle}>
-                <Link href="../admin">
+                <Link href="./createRule">
                     <button style={setStyle}>
                         戻る
                     </button>
