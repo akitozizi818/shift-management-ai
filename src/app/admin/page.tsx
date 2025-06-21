@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 "use client"
 import { CalendarRange, PencilRuler, Users2, Settings } from "lucide-react"
 import dynamic from "next/dynamic"
@@ -87,3 +88,14 @@ export default function AdminHomePage() {
     </div>
   )
 }
+=======
+import React from 'react'
+
+function page() {
+  return (
+    <div>page</div>
+  )
+}
+
+export default page
+>>>>>>> Stashed changes
