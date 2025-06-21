@@ -1,7 +1,3 @@
-// --- code trimmed for brevity ---
-// Assuming ShiftCalendar and other components are already here.
-// Below we inject the stylish ShiftModal component overwriting the previous one.
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -110,8 +106,10 @@ export default function ShiftModal({ isOpen, onClose, selectedDate, currentUser,
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-white/70">メンバー</label>
                       <select value={r.memberId} disabled={currentUser.role!=="manager"} onChange={e=>update(r.id,"memberId",e.target.value)} className="w-full bg-white/10 text-white/90 rounded px-3 py-2 backdrop-blur border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400">
-                        <option value="">選択してください</option>
-                        {members.map(m=>(<option key={m.id} value={m.id}>{m.name} ({m.role==="manager"?"店長":"スタッフ"})</option>))}
+                        {/* 修正点: option に text-black クラスを追加 */}
+                        <option value="" className="text-black">選択してください</option>
+                        {/* 修正点: option に text-black クラスを追加 */}
+                        {members.map(m=>(<option key={m.id} value={m.id} className="text-black">{m.name} ({m.role==="manager"?"店長":"スタッフ"})</option>))}
                       </select>
                     </div>
                     {/* start */}

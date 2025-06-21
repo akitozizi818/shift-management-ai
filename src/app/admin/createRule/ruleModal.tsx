@@ -1,36 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { RuleData } from './page';
-
-export type RuleData = Omit<Rule, 'id'>;
-export interface Rule {
-    id: number;
-    name: string;
-    ruleType: 'staffing' | 'schedule' | 'constraint';
-    minStaffCount: number;
-    maxStaffCount?: number;
-    maxConsecutiveDays: number;
-    workingHours: {
-        start: string;
-        end: string;
-    };
-    weeklyMaxHours?: number;
-    monthlyMaxHours?: number;
-    breakRules?: {
-        minWorkHoursForBreak: number;
-        breakDuration: number;
-    };
-    isActive: boolean;
-    priority: number;
-}
+import { Rule, RuleFormData } from './page'; 
 
 interface RuleModalProps {
     isOpen: boolean;
     onClose: () => void; 
-    onSave: (ruleData: RuleData) => void; 
+    onSave: (ruleData: RuleFormData) => void;
     existingRule: Rule | null;
 }
 
-const initialRuleData: RuleData = {
+const initialRuleData: RuleFormData = {
     name: '',
     ruleType: 'staffing',
     minStaffCount: 1,
@@ -50,7 +28,6 @@ const initialRuleData: RuleData = {
     priority: 5,
 };
 
-// --- スタイル定義 ---
 const modalOverlayStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
@@ -74,10 +51,12 @@ const modalTitleStyle: React.CSSProperties = {
     fontSize: '20px',
     fontWeight: 'bold',
     marginBottom: '24px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
 };
 const formGridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', // カラムの最小幅を調整
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
     gap: '20px',
     marginBottom: '16px'
 };
@@ -96,20 +75,20 @@ const inputStyle: React.CSSProperties = {
 };
 const modalActionsStyle: React.CSSProperties = {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: '12px',
     marginTop: '24px',
     paddingTop: '16px',
     borderTop: '1px solid #eee'
 };
-const backButton: React.CSSProperties = {
+const cancelButton: React.CSSProperties = {
     padding: '10px 20px',
     border: '1px solid #ccc',
     borderRadius: '5px',
     cursor: 'pointer',
     backgroundColor: 'white'
 };
-const nextButton: React.CSSProperties = {
+const saveButton: React.CSSProperties = {
     padding: '10px 20px',
     border: 'none',
     borderRadius: '5px',
@@ -117,26 +96,29 @@ const nextButton: React.CSSProperties = {
     backgroundColor: '#4169e1',
     color: 'white'
 };
+const sectionTitleStyle: React.CSSProperties = {
+    fontWeight: 'bold',
+    fontSize: '16px',
+    marginTop: '20px',
+    marginBottom: '10px',
+    borderBottom: '2px solid #eee',
+    paddingBottom: '5px',
+    gridColumn: '1 / -1'
+};
 
-const TOTAL_STEPS = 4;
-
-const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave }) => {
-    const [step, setStep] = useState(1);
-    const [ruleData, setRuleData] = useState<RuleData>(initialRuleData);
+const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave, existingRule }) => {
+    const [ruleData, setRuleData] = useState<RuleFormData>(initialRuleData);
 
     useEffect(() => {
         if (isOpen) {
             if (existingRule) {
-                setRuleData(existingRule);
+                setRuleData({ ...initialRuleData, ...existingRule });
             } else {
                 setRuleData(initialRuleData);
             }
-            setStep(1); 
         }
     }, [isOpen, existingRule]);
 
-    const handleNext = () => setStep(prev => Math.min(prev + 1, TOTAL_STEPS));
-    const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
     const handleSave = () => onSave(ruleData);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -157,13 +139,16 @@ const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave }) => {
             setRuleData(prev => ({ ...prev, [name]: finalValue }));
         } else {
             const [parentKey, childKey] = keys;
-            setRuleData(prev => ({
-                ...prev,
-                [parentKey]: {
-                    ...(prev as any)[parentKey],
-                    [childKey]: finalValue,
-                },
-            }));
+            setRuleData(prev => {
+                const parentObject = (prev as any)[parentKey] || {};
+                return {
+                    ...prev,
+                    [parentKey]: {
+                        ...parentObject,
+                        [childKey]: finalValue,
+                    },
+                };
+            });
         }
     };
 
@@ -173,39 +158,38 @@ const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave }) => {
         <div style={modalOverlayStyle} onClick={onClose}>
             <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
                 <h2 style={modalTitleStyle}>
-                  {existingRule ? 'ルール編集': '新しいルールを作成'} (ステップ {step}/{TOTAL_STEPS})
-                </h2>                
-                {/* Step 1: 基本情報 */}
-                {step === 1 && (
-                    <div style={formGridStyle}>
-                        <div style={formGroupStyle}>
-                            <label htmlFor="name">ルール名</label>
-                            <input id="name" type="text" name="name" value={ruleData.name} onChange={handleChange} style={inputStyle} placeholder="例: 平日昼間の人員配置"/>
-                        </div>
-                        <div style={formGroupStyle}>
-                            <label htmlFor="ruleType">ルールの種類</label>
-                            <select id="ruleType" name="ruleType" value={ruleData.ruleType} onChange={handleChange} style={inputStyle}>
-                                <option value="staffing">人員配置</option>
-                                <option value="schedule">スケジュール</option>
-                                <option value="constraint">制約</option>
-                            </select>
-                        </div>
-                        <div style={formGroupStyle}>
-                            <label htmlFor="priority">優先度 (数値が高いほど優先)</label>
-                            <input id="priority" type="number" name="priority" value={ruleData.priority} onChange={handleChange} style={inputStyle} />
-                        </div>
-                        <div style={{...formGroupStyle, justifyContent: 'center'}}>
-                            <label>
-                                <input type="checkbox" name="isActive" checked={ruleData.isActive} onChange={handleChange} style={{marginRight: '8px'}} />
-                                このルールを有効にする
-                            </label>
-                        </div>
-                    </div>
-                )}
+                    {existingRule ? 'ルール編集': '新しいルールを作成'}
+                </h2>
 
-                {/* Step 2: 人数・日数設定 */}
-                {step === 2 && (
+                <div style={formGridStyle}>
+                    <div style={{...formGroupStyle, gridColumn: '1 / -1'}}>
+                        <label htmlFor="name">ルール名</label>
+                        <input id="name" type="text" name="name" value={ruleData.name} onChange={handleChange} style={inputStyle} placeholder="例: 平日昼間の人員配置"/>
+                    </div>
+                    <div style={formGroupStyle}>
+                        <label htmlFor="ruleType">ルールの種類</label>
+                        <select id="ruleType" name="ruleType" value={ruleData.ruleType} onChange={handleChange} style={inputStyle}>
+                            <option value="staffing">人員配置</option>
+                            <option value="schedule">スケジュール</option>
+                            <option value="constraint">制約</option>
+                        </select>
+                    </div>
+                    <div style={formGroupStyle}>
+                        <label htmlFor="priority">優先度 (数値が高いほど優先)</label>
+                        <input id="priority" type="number" name="priority" value={ruleData.priority} onChange={handleChange} style={inputStyle} />
+                    </div>
+                    <div style={{...formGroupStyle, justifyContent: 'center', alignItems: 'flex-start'}}>
+                        <label style={{ display: 'flex', alignItems: 'center', height: '100%'}}>
+                            <input type="checkbox" name="isActive" checked={ruleData.isActive} onChange={handleChange} style={{marginRight: '8px', transform: 'scale(1.2)'}} />
+                            このルールを有効にする
+                        </label>
+                    </div>
+                </div>
+
+                
+                {ruleData.ruleType === 'staffing' && (
                     <div style={formGridStyle}>
+                        <h3 style={sectionTitleStyle}>人員配置設定</h3>
                         <div style={formGroupStyle}>
                             <label htmlFor="minStaffCount">最小人数</label>
                             <input id="minStaffCount" type="number" name="minStaffCount" value={ruleData.minStaffCount} onChange={handleChange} style={inputStyle} />
@@ -214,25 +198,21 @@ const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave }) => {
                             <label htmlFor="maxStaffCount">最大人数 (任意)</label>
                             <input id="maxStaffCount" type="number" name="maxStaffCount" value={ruleData.maxStaffCount ?? ''} onChange={handleChange} style={inputStyle} />
                         </div>
-                        <div style={formGroupStyle}>
-                            <label htmlFor="maxConsecutiveDays">最大連続勤務日数</label>
-                            <input id="maxConsecutiveDays" type="number" name="maxConsecutiveDays" value={ruleData.maxConsecutiveDays} onChange={handleChange} style={inputStyle} />
-                        </div>
                     </div>
                 )}
 
-                {/* Step 3: 時間設定 */}
-                {step === 3 && (
-                     <div style={formGridStyle}>
+                {ruleData.ruleType === 'schedule' && (
+                    <div style={formGridStyle}>
+                        <h3 style={sectionTitleStyle}>時間設定</h3>
                         <div style={formGroupStyle}>
                             <label htmlFor="workingHours.start">勤務開始時間</label>
                             <input id="workingHours.start" type="time" name="workingHours.start" value={ruleData.workingHours.start} onChange={handleChange} style={inputStyle} />
                         </div>
-                         <div style={formGroupStyle}>
+                        <div style={formGroupStyle}>
                             <label htmlFor="workingHours.end">勤務終了時間</label>
                             <input id="workingHours.end" type="time" name="workingHours.end" value={ruleData.workingHours.end} onChange={handleChange} style={inputStyle} />
                         </div>
-                        <div style={formGroupStyle}>
+                         <div style={formGroupStyle}>
                             <label htmlFor="weeklyMaxHours">週間最大労働時間 (任意)</label>
                             <input id="weeklyMaxHours" type="number" name="weeklyMaxHours" value={ruleData.weeklyMaxHours ?? ''} onChange={handleChange} style={inputStyle} />
                         </div>
@@ -243,32 +223,27 @@ const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave }) => {
                     </div>
                 )}
                 
-                {/* Step 4: 休憩設定 */}
-                {step === 4 && (
-                     <div style={formGridStyle}>
+                {ruleData.ruleType === 'constraint' && (
+                    <div style={formGridStyle}>
+                         <h3 style={sectionTitleStyle}>制約設定</h3>
+                        <div style={formGroupStyle}>
+                            <label htmlFor="maxConsecutiveDays">最大連続勤務日数</label>
+                            <input id="maxConsecutiveDays" type="number" name="maxConsecutiveDays" value={ruleData.maxConsecutiveDays} onChange={handleChange} style={inputStyle} />
+                        </div>
                         <div style={formGroupStyle}>
                             <label htmlFor="breakRules.minWorkHoursForBreak">休憩が必要な最低勤務時間(h)</label>
                             <input id="breakRules.minWorkHoursForBreak" type="number" name="breakRules.minWorkHoursForBreak" value={ruleData.breakRules?.minWorkHoursForBreak ?? ''} onChange={handleChange} style={inputStyle} />
                         </div>
-                         <div style={formGroupStyle}>
+                        <div style={formGroupStyle}>
                             <label htmlFor="breakRules.breakDuration">休憩時間 (分)</label>
                             <input id="breakRules.breakDuration" type="number" name="breakRules.breakDuration" value={ruleData.breakRules?.breakDuration ?? ''} onChange={handleChange} style={inputStyle} />
                         </div>
                     </div>
                 )}
 
-                {/* --- ナビゲーションボタンを実装 --- */}
                 <div style={modalActionsStyle}>
-                    <div style={{marginRight: 'auto'}}>
-                       {step > 1 && <button style={backButton} onClick={handleBack}>戻る</button>}
-                    </div>
-                    <div>
-                       <button style={backButton} onClick={onClose}>キャンセル</button>
-                    </div>
-                    <div>
-                       {step < TOTAL_STEPS && <button style={nextButton} onClick={handleNext}>次へ</button>}
-                       {step === TOTAL_STEPS && <button style={nextButton} onClick={handleSave}>保存</button>}
-                    </div>
+                    <button style={cancelButton} onClick={onClose}>キャンセル</button>
+                    <button style={saveButton} onClick={handleSave}>保存</button>
                 </div>
             </div>
         </div>
