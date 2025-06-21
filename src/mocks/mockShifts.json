@@ -1,0 +1,13 @@
+{
+  "2025-06-15": [
+    {
+      "id": "1",
+      "memberId": "1",
+      "name": "田中",
+      "role": "manager",
+      "startTime": "09:00",
+      "endTime": "17:00",
+      "status": "confirmed"
+    }
+  ]
+}

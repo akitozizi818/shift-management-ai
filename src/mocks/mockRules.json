@@ -1,0 +1,23 @@
+[
+    {"居酒屋1":[
+        {
+            "id": "rule1",
+            "name": "Rule 1",
+            "description": "This is the first rule.",
+            "enabled": true,
+            "content":"平日は１人入る、土日は２人入る",
+            "createdAt": "2023-10-01T12:00:00Z",
+            "updatedAt": "2023-10-01T12:00:00Z" 
+        },
+        {
+            "id": "rule2",
+            "name": "Rule 2",
+            "description": "店長は毎日出勤する",
+            "enabled": false,
+            "content":"This is the content of Rule 2.",
+            "createdAt": "2023-10-02T12:00:00Z",
+            "updatedAt": "2023-10-02T12:00:00Z"
+        }
+    ]
+}
+]

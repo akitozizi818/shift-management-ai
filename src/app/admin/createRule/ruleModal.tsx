@@ -87,7 +87,6 @@ const RuleModal: React.FC<RuleModalProps> = ({ isOpen, onClose, onSave, ruleText
         <h2 style={modalTitleStyle}>新しいルールの作成</h2>
         <textarea
           style={textareaStyle}
-          placeholder="お店のルールを入力してください..."
           value={ruleText}
           onChange={(e) => setRuleText(e.target.value)}
         />
