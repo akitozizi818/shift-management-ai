@@ -1,27 +1,56 @@
 "use client";
+
+import { useState } from "react";
 import ShiftCalendar from "@/components/shift/shift-calendar";
-import { loadShiftMap } from "../../../../lib/shiftStorage";
-import type { Role } from "@/types/shift";
+import ShiftModal from "@/components/shift/shift-modal";
+
+import { loadShiftMap, saveShiftMap } from "../../../logic/shiftStorage";
+import type { Shift, Role } from "@/types/shift";
 
 export default function FinalSchedulePage() {
-    const currentUser = { id: "1", role: "manager" as Role };
-    const finalMap = loadShiftMap();      // 公開シフトのみ
-    // 万一混入していても黄バッジを除外
-    Object.entries(finalMap).forEach(([k, arr]) => {
-        finalMap[k] = arr.filter((s) => s.status === "confirmed");
+  // ★ 認証連携に差し替えてください
+  const currentUser = { id: "1", role: "manager" as Role };
+
+  // ① 公開済みシフトをロード (confirmed だけ)
+  const [shiftMap, setShiftMap] = useState<Record<string, Shift[]>>(() => {
+    const map = loadShiftMap();
+    Object.entries(map).forEach(([k, arr]) => {
+      map[k] = arr.filter((s) => s.status === "confirmed");
     });
+    return map;
+  });
 
-    return (
-        <div className="max-w-6xl mx-auto px-6 py-8">
-            <h1 className="text-2xl font-bold mb-4">確定シフト表</h1>
+  // ② モーダル制御
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-            <ShiftCalendar
-                currentUser={currentUser}
-                shiftMap={finalMap}
-                selectedDate={new Date()}
-                onDateSelect={() => { }}
-                onEditShift={() => { }}
-            />
-        </div>
-    );
+  // ③ 店長保存ロジック
+  const persistFinal = (m: Record<string, Shift[]>) => {
+    setShiftMap(m);
+    saveShiftMap(m);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-8">
+      <ShiftCalendar
+        currentUser={currentUser}
+        shiftMap={shiftMap}
+        selectedDate={selectedDate ?? new Date()}
+        onDateSelect={(d) => setSelectedDate(d)}
+        onEditShift={() => setModalOpen(true)}   // ← 店長なら編集
+      />
+
+      {/* モーダル：店長のみ開く */}
+      {currentUser.role === "manager" && selectedDate && (
+        <ShiftModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          selectedDate={selectedDate}
+          currentUser={currentUser}
+          shiftMap={shiftMap}
+          setShiftMap={persistFinal}   // 保存で確定表を更新
+        />
+      )}
+    </div>
+  );
 }

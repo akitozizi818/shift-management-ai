@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import ShiftManagementPage from "../../../components/shift/shift-mangement";
-import { loadRequestMap } from "../../../../lib/shiftRequestStorage";
+import { loadRequestMap } from "../../../logic/shiftRequestStorage";
 import type { Role, Shift } from "../../../types/shift";
 
 export default function RequestPage() {

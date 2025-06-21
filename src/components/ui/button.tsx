@@ -26,13 +26,29 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       icon: "h-10 w-10",
     }
 
+    // Filter out onAnimationStart and similar props that conflict with Framer Motion
+    // Also filter out drag event handlers that are incompatible with Framer Motion
+    const {
+      onAnimationStart,
+      onAnimationEnd,
+      onAnimationIteration,
+      onDrag,
+      onDragStart,
+      onDragEnd,
+      onDragOver,
+      onDragEnter,
+      onDragLeave,
+      onDrop,
+      ...restProps
+    } = props
+
     return (
       <motion.button
         ref={ref}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className || ""}`}
-        {...props}
+        {...restProps}
       >
         {children}
       </motion.button>

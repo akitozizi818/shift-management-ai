@@ -4,7 +4,7 @@ import type React from "react"
 import { forwardRef } from "react"
 import { motion } from "framer-motion"
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BadgeProps extends React.ComponentProps<typeof motion.div> {
   variant?: "default" | "secondary" | "destructive" | "outline"
 }
 

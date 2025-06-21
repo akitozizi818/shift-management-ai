@@ -9,7 +9,7 @@
 //=====================================================================
 
 import { v4 as uuidv4 } from 'uuid';
-import members from "mocks/mockUsers.json";
+import members from "../mocks/mockUsers.json";
 import type { Shift, ShiftStatus } from "@/types/shift";
 
 /* ------------------------------------------------------------------
