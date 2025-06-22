@@ -2,6 +2,7 @@
 import { CalendarRange, PencilRuler, Users2, Settings } from "lucide-react"
 import dynamic from "next/dynamic"
 import ModernMenuCard from "../../components/dashboard/modern-menu-card"
+import { useAuth } from "../context/AuthContext"
 
 const MotionDiv = dynamic(() => import("framer-motion").then((mod) => mod.motion.div), { ssr: false })
 
@@ -37,6 +38,10 @@ const menuItems = [
 ]
 
 export default function AdminHomePage() {
+  const {user} = useAuth()
+  const firstUserKey = user ? Object.keys(user)[0] : undefined;
+  const firstUser = firstUserKey && user ? user[firstUserKey] : undefined;
+
   return (
     <div className="min-h-screen relative">
 
@@ -57,7 +62,7 @@ export default function AdminHomePage() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  <h1 className="text-4xl font-bold text-white mb-4">おかえりなさい、店長！</h1>
+                  <h1 className="text-4xl font-bold text-white mb-4">おかえりなさい、{firstUser?.name}さん！</h1>
                   <p className="text-xl text-white/80">今日も効率的なシフト管理をサポートします</p>
                 </MotionDiv>
               </div>

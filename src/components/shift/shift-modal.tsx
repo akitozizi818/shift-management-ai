@@ -1,142 +1,335 @@
-// --- code trimmed for brevity ---
-// Assuming ShiftCalendar and other components are already here.
-// Below we inject the stylish ShiftModal component overwriting the previous one.
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2 } from "lucide-react";
-import members from "../../mocks/mockUsers.json";
-import type { Shift, Role } from "../../types/shift";
-import { loadRequestMap, saveRequestMap } from "../../logic/shiftRequestStorage";
-import { saveShiftMap } from "../../logic/shiftStorage";
+import { Plus, Trash2, X } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
-interface ShiftModalProps {
-  currentUser: { id: string; role: Role };
+import { useAuth } from "@/app/context/AuthContext";
+import { saveShiftRequest } from "@/logic/saveShiftRequest";
+import { fetchPublished } from "@/logic/firebaseSchedule";
+import { fetchActiveUsers, UserDoc } from "@/logic/firebaseUsers";
+
+import type { memberAssignment, Role, ShiftRequest } from "@/types/shift";
+
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date;
-  shiftMap: Record<string, Shift[]>;
-  setShiftMap: (m: Record<string, Shift[]>) => void;
+  dayAssignments: Record<string, memberAssignment[]>;
+  setDayAssignments: (m: Record<string, memberAssignment[]>) => void;
 }
 
-export default function ShiftModal({ isOpen, onClose, selectedDate, currentUser, shiftMap, setShiftMap }: ShiftModalProps) {
-  /* utilities */
-  const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const dateKey = key(selectedDate);
+/* ---------- helpers ---------- */
+const pad = (n: number) => n.toString().padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const ym = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 
-  /* state */
-  const [rows, setRows] = useState<Shift[]>([]);
+export default function ShiftModal({
+  isOpen,
+  onClose,
+  selectedDate,
+  dayAssignments,
+  setDayAssignments,
+}: Props) {
+  const dKey = ymd(selectedDate);
+  const monthKey = ym(selectedDate);
 
-  /* load */
+  const [rows, setRows] = useState<memberAssignment[]>([]);
+  const [users, setUsers] = useState<Record<string, UserDoc>>({});
+  const [category, setCategory] = useState<"preferred" | "unavailable">("preferred");
+
+  const { user, id } = useAuth();
+  const currentUser = user && id ? user[id] : undefined;
+  const isAdmin = currentUser?.role === "admin";
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchActiveUsers().then(setUsers);
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     if (!isOpen) return;
-    const todays = shiftMap[dateKey] ?? [];
-    if (currentUser.role === "staff") {
-      const mine = todays.find(s => s.memberId === currentUser.id);
-      setRows(mine ? [mine] : [{ id: crypto.randomUUID(), memberId: currentUser.id, name: members.find(m => m.id === currentUser.id)!.name, role: "staff" as Role, startTime: "09:00", endTime: "17:00", status: "request" }]);
-    } else {
-      setRows(todays);
-    }
-  }, [isOpen, dateKey]);
 
-  /* perms */
-  const canEdit = (r: Shift) => currentUser.role === "manager" || r.memberId === currentUser.id;
+    let todays = dayAssignments[dKey] ?? [];
 
-  /* mutate */
-  const update = (id: string, k: keyof Shift, v: string) => setRows(p => p.map(r => {
-    if (r.id !== id || !canEdit(r)) return r;
-    if (currentUser.role === "staff" && k === "memberId") return r;
-    if (k === "memberId") {
-      const m = members.find(m => m.id === v);
-      return { ...r, memberId: v, name: m?.name ?? "", role: (m?.role ?? "staff") as Role };
-    }
-    if (k === "role") {
-      return { ...r, role: v as Role };
-    }
-    // For other keys (like startTime, endTime, status), update generically
-    return { ...r, [k]: v };
-  }));
+    const load = async () => {
+      if (isAdmin && todays.length === 0) {
+        const pub = await fetchPublished();
+        if (pub && pub.shifts[dKey]) {
+          todays = pub.shifts[dKey].memberAssignments as memberAssignment[];
+        }
+      }
 
-  const add = () => currentUser.role === "manager" && setRows(p => [...p, { id: crypto.randomUUID(), memberId: "", name: "", role: "staff", startTime: "09:00", endTime: "17:00", status: "request" }]);
+      if (isAdmin) {
+        setRows(
+          todays.length
+            ? todays
+            : [
+                {
+                  userId: "",
+                  role: "member",
+                  startTime: "09:00",
+                  endTime: "17:00",
+                },
+              ]
+        );
+      } else {
+        const mine = todays.find((a) => a.userId === id);
+        setRows([
+          mine ?? {
+            userId: id!,
+            startTime: "09:00",
+            endTime: "17:00",
+            role: "member",
+          },
+        ]);
+      }
+    };
 
-  const remove = (id: string) => setRows(p => p.filter(r => r.id !== id || !(canEdit(p.find(x => x.id === id)!) && (currentUser.role === "manager" || p.filter(x => x.memberId === currentUser.id).length > 1))));
+    load();
+  }, [isOpen, dKey, dayAssignments, isAdmin, id]);
 
-  /* save */
-  const save = () => {
-    if (currentUser.role === "manager") {
-      const newFinal = { ...shiftMap, [dateKey]: rows };
-      setShiftMap(newFinal);
-      saveShiftMap(newFinal);
-    } else {
-      const all = loadRequestMap();
-      const others = (all[dateKey] ?? []).filter(s => s.memberId !== currentUser.id);
-      all[dateKey] = [...others, ...rows];
-      saveRequestMap(all);
-      setShiftMap(all);
-    }
-    onClose();
+  const canEdit = (r: memberAssignment) => isAdmin || r.userId === id;
+
+  const update = (idx: number, field: keyof memberAssignment, val: string) => {
+    setRows((prev) => {
+      const next = [...prev];
+      const row = { ...next[idx] };
+
+      if (!canEdit(row)) return prev;
+
+      if (field === "userId") {
+        const u = users[val];
+        row.userId = val;
+        row.role = (u?.role ?? "member") as Role;
+      } else {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        row[field] = val;
+      }
+      next[idx] = row;
+      return next;
+    });
   };
 
-  /* -------------------------------- render -------------------------------- */
+  const addRow = () => {
+    if (!isAdmin) return;
+    setRows((p) => [
+      ...p,
+      { userId: "", startTime: "09:00", endTime: "17:00", role: "member" },
+    ]);
+  };
+
+  const removeRow = (idx: number) =>
+    setRows((p) => (p.length === 1 ? p : p.filter((_, i) => i !== idx)));
+
+  const handleSave = async () => {
+    /* ===== 1) Firestore 用ペイロード作成 ===== */
+    const preferredShifts: ShiftRequest["preferredShifts"] = {};
+    if (category === "preferred") {
+      preferredShifts[dKey] = {
+        startTime: rows[0]?.startTime ?? "09:00",
+        endTime: rows[0]?.endTime ?? "17:00",
+      };
+    }
+
+    const shiftRequest: ShiftRequest = {
+      requestId: uuidv4(),
+      userId: id || "",
+      month: monthKey,
+      preferredDates: category === "preferred" ? [selectedDate.getTime()] : [],
+      unavailableDates: category === "unavailable" ? [selectedDate.getTime()] : [],
+      preferredShifts,
+      status: "pending",
+      submittedAt: Date.now(),
+    };
+
+    try {
+      /* ===== 2) 楽観的 UI 更新 ===== */
+      setDayAssignments((prev: Record<string, memberAssignment[]>) => {
+        const next: Record<string, memberAssignment[]> = { ...prev };
+
+        if (category === "preferred") {
+          interface NewRow extends memberAssignment {}
+          const newRows: NewRow[] = isAdmin ? rows : rows.filter((r: memberAssignment) => r.userId === id);
+          const others: memberAssignment[] = (next[dKey] ?? []).filter(
+        (a: memberAssignment) => !newRows.some((n: memberAssignment) => n.userId === a.userId)
+          );
+          next[dKey] = [...others, ...newRows];
+        } else {
+          interface AbsentAssignment extends memberAssignment {}
+          const absent: AbsentAssignment = {
+        userId: id!,
+        startTime: "00:00",
+        endTime: "00:00",
+        role: "unavailable",
+          };
+          const others: memberAssignment[] = (next[dKey] ?? []).filter((a: memberAssignment) => a.userId !== id);
+          next[dKey] = [...others, absent];
+        }
+
+        return next;
+      });
+
+      /* ===== 3) Firestore へ書き込み ===== */
+      await saveShiftRequest(shiftRequest);
+
+      /* ===== 4) モーダルを閉じる ===== */
+      onClose();
+    } catch {
+      alert("保存に失敗しました");
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={onClose}>
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", stiffness: 260, damping: 24 }} onClick={e => e.stopPropagation()} className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
-            {/* header */}
-            <div className="bg-gradient-to-r from-blue-600/90 to-indigo-700/90 py-4 px-6 flex items-center justify-between shadow-inner shadow-black/20">
-              <h2 className="text-white font-semibold text-lg">{selectedDate.getFullYear()} / {selectedDate.getMonth()+1}/{selectedDate.getDate()} のシフト</h2>
-              <motion.button whileHover={{ rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={onClose} className="p-2 rounded-full hover:bg-white/20">
+        <motion.div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 24 }}
+            className="w-full max-w-3xl bg-slate-900/80 backdrop-blur rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+          >
+            {/* ヘッダー */}
+            <div className="bg-indigo-700/90 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-white font-semibold">
+                {selectedDate.toLocaleDateString("ja-JP")} のシフト申請
+              </h2>
+              <motion.button
+                whileHover={{ rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-white/20"
+              >
                 <X className="w-5 h-5 text-white" />
               </motion.button>
             </div>
 
-            {/* body */}
-            <div className="px-6 py-6 overflow-y-auto max-h-[60vh] space-y-6">
-              {rows.map((r,i)=>(
-                <motion.div key={r.id} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -10, opacity: 0 }} transition={{ delay: i*0.05 }} className="border border-white/10 bg-slate-900/60 backdrop-blur rounded-xl p-4 shadow-inner shadow-black/30">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm tracking-wider text-white/80">SHIFT {i+1}</span>
-                    {canEdit(r) && (currentUser.role === "manager" || rows.length>1) && (
-                      <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }} onClick={()=>remove(r.id)} className="p-2 rounded-full bg-red-500/10 hover:bg-red-500/20">
-                        <Trash2 className="w-4 h-4 text-red-300" />
-                      </motion.button>) }
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* member */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-white/70">メンバー</label>
-                      <select value={r.memberId} disabled={currentUser.role!=="manager"} onChange={e=>update(r.id,"memberId",e.target.value)} className="w-full bg-white/10 text-white/90 rounded px-3 py-2 backdrop-blur border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400">
-                        <option value="">選択してください</option>
-                        {members.map(m=>(<option key={m.id} value={m.id}>{m.name} ({m.role==="manager"?"店長":"スタッフ"})</option>))}
-                      </select>
-                    </div>
-                    {/* start */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-white/70">開始</label>
-                      <input type="time" value={r.startTime} disabled={!canEdit(r)} onChange={e=>update(r.id,"startTime",e.target.value)} className="w-full bg-white/10 text-white rounded px-3 py-2 backdrop-blur border border-white/10 focus:ring-2 focus:ring-indigo-400" />
-                    </div>
-                    {/* end */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-white/70">終了</label>
-                      <input type="time" value={r.endTime} disabled={!canEdit(r)} onChange={e=>update(r.id,"endTime",e.target.value)} className="w-full bg-white/10 text-white rounded px-3 py-2 backdrop-blur border border-white/10 focus:ring-2 focus:ring-indigo-400" />
-                    </div>
-                  </div>
-                </motion.div>))}
-
-              {currentUser.role === "manager" && (
-                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} onClick={add} className="w-full py-3 border-2 border-dashed border-white/20 rounded-xl text-white/70 hover:bg-white/5 flex items-center justify-center gap-2">
-                  <Plus className="w-4 h-4"/> シフトを追加
-                </motion.button>) }
+            {/* カテゴリ切替 */}
+            <div className="px-6 pt-6 flex gap-4">
+              <label className="flex items-center gap-2 text-white/80">
+                <input
+                  type="radio"
+                  name="cat"
+                  value="preferred"
+                  checked={category === "preferred"}
+                  onChange={() => setCategory("preferred")}
+                />
+                希望勤務日
+              </label>
+              <label className="flex items-center gap-2 text-white/80">
+                <input
+                  type="radio"
+                  name="cat"
+                  value="unavailable"
+                  checked={category === "unavailable"}
+                  onChange={() => setCategory("unavailable")}
+                />
+                勤務不可日
+              </label>
             </div>
 
-            {/* footer */}
-            <div className="bg-slate-800/60 border-t border-white/10 px-6 py-4 flex gap-4 backdrop-blur">
-              <button onClick={onClose} className="flex-1 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/80">キャンセル</button>
-              <button onClick={save} className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">保存</button>
+            {/* 入力欄 */}
+            {category === "preferred" && (
+              <div className="px-6 py-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                {rows.map((r, i) => (
+                  <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-white/80">SHIFT {i + 1}</span>
+                      {canEdit(r) && rows.length > 1 && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => removeRow(i)}
+                          className="p-2 rounded-full bg-red-500/10 hover:bg-red-500/20"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-300" />
+                        </motion.button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs text-white/70">メンバー</label>
+                        <select
+                          disabled={!isAdmin}
+                          value={r.userId}
+                          onChange={(e) => update(i, "userId", e.target.value)}
+                          className="w-full bg-white/10 text-white rounded px-3 py-2 focus:bg-white focus:text-black focus:outline-none"
+                        >
+                          {!isAdmin && <option value={id ?? ""}>{currentUser?.name}</option>}
+                          {isAdmin &&
+                            Object.entries(users).map(([uid, u]) => (
+                              <option key={uid} value={uid}>
+                                {u.name}（{u.role === "admin" ? "店長" : "スタッフ"}）
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs text-white/70">開始</label>
+                        <input
+                          type="time"
+                          value={r.startTime}
+                          onChange={(e) => update(i, "startTime", e.target.value)}
+                          disabled={!canEdit(r)}
+                          className="w-full bg-white/10 text-white rounded px-3 py-2"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs text-white/70">終了</label>
+                        <input
+                          type="time"
+                          value={r.endTime}
+                          onChange={(e) => update(i, "endTime", e.target.value)}
+                          disabled={!canEdit(r)}
+                          className="w-full bg-white/10 text-white rounded px-3 py-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {isAdmin && (
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={addRow}
+                    className="w-full py-3 border-2 border-dashed border-white/20 rounded-xl text-white/70 hover:bg-white/5 flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> 行を追加
+                  </motion.button>
+                )}
+              </div>
+            )}
+
+            {/* フッター */}
+            <div className="bg-slate-800/60 border-t border-white/10 px-6 py-4 flex gap-4">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/80"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              >
+                保存
+              </button>
             </div>
           </motion.div>
         </motion.div>

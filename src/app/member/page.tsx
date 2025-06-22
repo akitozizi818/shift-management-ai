@@ -2,13 +2,15 @@
 import dynamic from "next/dynamic"
 import { CalendarRange, Edit, AlarmClock, Megaphone } from "lucide-react"
 import ModernMenuCard from "@/components/dashboard/modern-menu-card"
+import {  useEffect, useState } from "react"
+import { useAuth } from "../context/AuthContext"
+import { fetchPublished } from "@/logic/firebaseSchedule"
 
 const MotionDiv = dynamic(
   () => import("framer-motion").then((m) => m.motion.div),
   { ssr: false }
 )
 
-const currentUser = { id: "3", role: "staff", name: "山田" }
 
 /* ---------------- メニュー ---------------- */
 const menuItems = [
@@ -28,18 +30,60 @@ const menuItems = [
   },
 ]
 
-/* ---------------- 追加情報 ---------------- */
-const nextShift = {
-  date: "6/22(土)",
-  time: "10:00 - 18:00",
-}
-
-const news = [
-  "6/25 までに 7 月分の希望提出をお願いします。",
-  "アプリ v1.2.0 をリリースしました。",
-]
-
 export default function MemberHomePage() {
+  const { user, id } = useAuth();
+  const [nextShift, setNextShift] = useState<{ date: string; time: string } | null>(null);
+  const [news, setNews] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchShiftData = async () => {
+      try {
+        // 公開中のスケジュールを取得
+        const publishedSchedule = await fetchPublished();
+        if (!publishedSchedule) {
+          console.log("No published schedule found.");
+          return;
+        }
+
+        // 直近のシフトを特定
+        const today = new Date();
+        const upcomingShift = Object.entries(publishedSchedule.shifts)
+          .filter(([date]) => new Date(date) >= today) // 今日以降のシフト
+          .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime()) // 日付順にソート
+          .shift(); // 最も近いシフトを取得
+
+        if (upcomingShift) {
+          const [date, { memberAssignments }] = upcomingShift;
+          const startTime = memberAssignments[0]?.startTime || "未定";
+          const endTime = memberAssignments[0]?.endTime || "未定";
+
+          setNextShift({
+            date: new Date(date).toLocaleDateString("ja-JP", {
+              month: "long",
+              day: "numeric",
+              weekday: "short",
+            }),
+            time: `${startTime} - ${endTime}`,
+          });
+        }
+
+        // お知らせを生成
+        const currentDate = new Date();
+        const currentMonth = currentDate.toLocaleString("ja-JP", { month: "long" });
+        const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1).toLocaleString("ja-JP", { month: "long" });
+
+        setNews([
+          `${currentMonth}25日 までに ${nextMonth}分の希望提出をお願いします。`,
+          "アプリ v1.2.0 をリリースしました。",
+        ]);
+      } catch (error) {
+        console.error("Error fetching shift data:", error);
+      }
+    };
+
+    fetchShiftData();
+  }, []);
+
   return (
     <MotionDiv
       initial={{ opacity: 0, y: 20 }}
@@ -49,7 +93,10 @@ export default function MemberHomePage() {
     >
       {/* ---------------- ヘッダー ---------------- */}
       <h1 className="text-4xl font-bold text-white mb-4">
-        おかえりなさい、{currentUser.name}さん
+        おかえりなさい、
+        {user && id && user[id] && user[id].name
+          ? `${user[id].name}さん`
+          : "ゲストさん"}
       </h1>
       <p className="text-xl text-white/80 mb-10">
         シフト希望の提出・確認をサポートします
@@ -77,17 +124,19 @@ export default function MemberHomePage() {
         className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10"
       >
         {/* 次の出勤 */}
-        <div className="flex items-center gap-4 bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6">
-          <div className="grid place-items-center w-14 h-14 rounded-full bg-emerald-500/20">
-            <AlarmClock className="w-7 h-7 text-emerald-300" />
+        {nextShift && (
+          <div className="flex items-center gap-4 bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6">
+            <div className="grid place-items-center w-14 h-14 rounded-full bg-emerald-500/20">
+              <AlarmClock className="w-7 h-7 text-emerald-300" />
+            </div>
+            <div>
+              <p className="text-sm text-white/70">次の出勤</p>
+              <p className="text-lg font-semibold text-white">
+                {nextShift.date} {nextShift.time}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-white/70">次の出勤</p>
-            <p className="text-lg font-semibold text-white">
-              {nextShift.date} {nextShift.time}
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* お知らせ */}
         <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6">
@@ -96,8 +145,8 @@ export default function MemberHomePage() {
             <h3 className="text-sm font-semibold text-white">お知らせ</h3>
           </div>
           <ul className="space-y-2 text-sm text-white/80">
-            {news.map((n) => (
-              <li key={n} className="flex gap-2">
+            {news.map((n, index) => (
+              <li key={index} className="flex gap-2">
                 <span className="w-1.5 h-1.5 mt-2 rounded-full bg-emerald-400" />
                 {n}
               </li>

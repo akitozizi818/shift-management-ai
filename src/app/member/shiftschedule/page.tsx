@@ -1,42 +1,60 @@
 "use client";
 
-import { useState } from "react";
+/* =====================================================
+ * MemberFinalPage – スタッフ用 “確定シフト” 閲覧
+ *   • Firestore に status === "published" のスケジュールが 1 件だけ
+ *   • 自分だけ / 全員 切替トグル
+ * ====================================================*/
+
+import { useEffect, useState } from "react";
 import ShiftCalendar from "@/components/shift/shift-calendar";
-import { loadShiftMap } from "@/logic/shiftStorage";
-import type { Role } from "@/types/shift";
+import { fetchPublished } from "@/logic/firebaseSchedule";
+import type { memberAssignment } from "@/types/shift";
 
 export default function MemberFinalPage() {
-  const currentUser = { id: "2", role: "staff" as Role };
-  const finalMap = loadShiftMap();
-
   const [viewMode, setViewMode] = useState<"mine" | "all">("mine");
+  const [assignments, setAssignments] = useState<Record<string, memberAssignment[]>>({});
 
+  /* -------- 公開中スケジュールを 1 件取得 -------- */
+  useEffect(() => {
+    const load = async () => {
+      const pub = await fetchPublished();          // ← Schedule | null
+      console.log("Published Schedule:", pub);
+      if (!pub) return;
+      const map: Record<string, memberAssignment[]> = {};
+      Object.entries(pub.shifts).forEach(([date, val]) => {
+        map[date] = val.memberAssignments || [];
+      });
+      setAssignments(map);
+    };
+    load();
+  }, []);
+
+console.log("Assignments:", assignments);
+  /* -------- UI -------- */
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 space-y-4">
-      {/* ---- トグル ---- */}
+      {/* トグル */}
       <div className="flex justify-end gap-3">
-        <button
-          onClick={() => setViewMode("mine")}
-          className={`px-4 py-1 rounded-full text-sm ${viewMode==="mine" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-700"}`}
-        >
-          自分だけ
-        </button>
-        <button
-          onClick={() => setViewMode("all")}
-          className={`px-4 py-1 rounded-full text-sm ${viewMode==="all" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-700"}`}
-        >
-          全員
-        </button>
+        {["mine", "all"].map(v => (
+          <button
+            key={v}
+            onClick={() => setViewMode(v as any)}
+            className={`px-4 py-1 rounded-full text-sm transition ${
+              viewMode === v ? "bg-blue-600 text-white shadow" : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+            }`}
+          >
+            {v === "mine" ? "自分だけ" : "全員"}
+          </button>
+        ))}
       </div>
 
-      {/* ---- カレンダー ---- */}
+      {/* カレンダー */}
       <ShiftCalendar
-        currentUser={currentUser}
-        shiftMap={finalMap}
+        dayAssignments={assignments}
+        viewMode={viewMode}
         selectedDate={new Date()}
         onDateSelect={() => {}}
-        onEditShift={() => {}}
-        viewMode={viewMode}              
       />
     </div>
   );

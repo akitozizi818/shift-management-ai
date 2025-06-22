@@ -1,54 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ShiftCalendar from "@/components/shift/shift-calendar";
 import ShiftModal from "@/components/shift/shift-modal";
 
-import { loadShiftMap, saveShiftMap } from "../../../logic/shiftStorage";
-import type { Shift, Role } from "@/types/shift";
+import { fetchPublished, updateSchedule } from "@/logic/firebaseSchedule";
+import { type Schedule, type memberAssignment } from "@/types/shift";
 
 export default function FinalSchedulePage() {
-  // ★ 認証連携に差し替えてください
-  const currentUser = { id: "1", role: "manager" as Role };
-
-  // ① 公開済みシフトをロード (confirmed だけ)
-  const [shiftMap, setShiftMap] = useState<Record<string, Shift[]>>(() => {
-    const map = loadShiftMap();
-    Object.entries(map).forEach(([k, arr]) => {
-      map[k] = arr.filter((s) => s.status === "confirmed");
-    });
-    return map;
-  });
-
-  // ② モーダル制御
+  /* ---------- Firestore から published 取得 ---------- */
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [dayAssignments, setDayAssignments] = useState<Record<string, memberAssignment[]>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const pub = await fetchPublished(); // status === "published" のスケジュールを1件取得
+      if (!pub) return;
+      setSchedule(pub);
+      const map = Object.fromEntries(
+        Object.entries(pub.shifts).map(([d, v]) => [d, v.memberAssignments])
+      ) as Record<string, memberAssignment[]>;
+      setDayAssignments(map);
+    })();
+  }, []);
 
-  // ③ 店長保存ロジック
-  const persistFinal = (m: Record<string, Shift[]>) => {
-    setShiftMap(m);
-    saveShiftMap(m);
+  // ❷ 保存（再ラップしてから Firestore 更新）
+  const persist = (map: Record<string, memberAssignment[]>) => {
+    if (!schedule) return;
+
+    const wrapped = Object.fromEntries(
+      Object.entries(map).map(([d, arr]) => [d, { memberAssignments: arr }])
+    );
+
+    const updated: Schedule = { ...schedule, shifts: wrapped };
+    updateSchedule(updated.scheduleId, wrapped); // Firestore に保存
+    setSchedule(updated);
+    setDayAssignments(map); // state はラップ無し
   };
+
+
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <ShiftCalendar
-        currentUser={currentUser}
-        shiftMap={shiftMap}
+        dayAssignments={dayAssignments}                  // 確定スケジュールを渡す
         selectedDate={selectedDate ?? new Date()}
-        onDateSelect={(d) => setSelectedDate(d)}
-        onEditShift={() => setModalOpen(true)}   // ← 店長なら編集
+        onDateSelect={d => setSelectedDate(d)}
+        onEditShift={() => setModalOpen(true)}          // 店長のみ表示の前提
       />
 
-      {/* モーダル：店長のみ開く */}
-      {currentUser.role === "manager" && selectedDate && (
+      {/* 編集モーダル（店長のみ） */}
+      {selectedDate && (
         <ShiftModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           selectedDate={selectedDate}
-          currentUser={currentUser}
-          shiftMap={shiftMap}
-          setShiftMap={persistFinal}   // 保存で確定表を更新
+          dayAssignments={dayAssignments}
+          setDayAssignments={persist}
         />
       )}
     </div>

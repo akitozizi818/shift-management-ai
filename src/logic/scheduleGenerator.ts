@@ -1,112 +1,101 @@
-// lib/scheduleGenerator.ts
-//=====================================================================
-//  📅  月次シフト自動生成ユーティリティ（純 TypeScript）
-//---------------------------------------------------------------------
-// 使い方
-// import { generateSchedule } from "@/lib/scheduleGenerator";
-// const map = generateSchedule(2025, 7, "random-basic"); // 2025年7月
-// persist(map);
-//=====================================================================
+// src/logic/scheduleGenerator.ts
+/* =====================================================================
+ * Schedule Generator – “random-basic”         last update: 2025-06-xx
+ * ====================================================================*/
 
-import { v4 as uuidv4 } from 'uuid';
-import members from "../mocks/mockUsers.json";
-import type { Shift, ShiftStatus } from "@/types/shift";
+import { v4 as uuid } from "uuid";
+import type { Schedule, memberAssignment } from "@/types/shift";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "./firebase";
 
-/* ------------------------------------------------------------------
- * 型: ルール名（増えたらここに追加）
- * ----------------------------------------------------------------*/
-export type RuleName = "random-basic" | "manager-fixed";
+/** 現状ルールは 1 種のみ */
+export type RuleName = "random-basic";
 
-/* ------------------------------------------------------------------
- * ユーティリティ
- * ----------------------------------------------------------------*/
-const key = (y: number, m: number, d: number) =>
-  `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+/** ────────────────────────────────────────────────
+ *  utilities
+ * ─────────────────────────────────────────────── */
+const two = (n: number) => String(n).padStart(2, "0");
 
-const pickManager = () => members.find((m) => m.role === "manager")!;
-const pickStaff   = () => members.filter((m) => m.role === "staff");
+/** 月の日数を取得 */
+const daysInMonth = (y: number, m: number) =>
+  new Date(y, m, 0).getDate();
 
-/* ------------------------------------------------------------------
- * ルール①: random-basic
- *  店長1名 + スタッフ 2〜N 名をランダム
- * ----------------------------------------------------------------*/
-function randomBasic(year: number, month: number): Record<string, Shift[]> {
-  const last = new Date(year, month, 0).getDate(); // month: 1-index
-  const map: Record<string, Shift[]> = {};
-  const manager = pickManager();
-  const staff   = pickStaff();
+/** ランダムユーティリティ */
+const rand = <T>(arr: readonly T[]) =>
+  arr[Math.floor(Math.random() * arr.length)];
 
-  const startOpt = ["09:00", "10:00", "11:00"];
-  const endOpt   = ["17:00", "18:00", "19:00"];
+/** 勤務時間パターン */
+const SHIFTS = [
+  { start: "09:00", end: "17:00" },
+  { start: "11:00", end: "19:00" },
+  { start: "13:00", end: "21:00" },
+] as const;
 
-  for (let d = 1; d <= last; d++) {
-    const dateKey = key(year, month, d);
-    const staffCnt = 2 + Math.floor(Math.random() * staff.length); // 2〜N
-    const picked   = [...staff].sort(() => 0.5 - Math.random()).slice(0, staffCnt);
-
-    map[dateKey] = [
-      {
-        id: uuidv4(),
-        memberId: manager.id,
-        name: manager.name,
-        role: "manager",
-        startTime: "09:00",
-        endTime:   "17:00",
-        status: "confirmed" as ShiftStatus,
-      },
-      ...picked.map((p) => ({
-        id: uuidv4(),
-        memberId: p.id,
-        name: p.name,
-        role: "staff" as const,
-        startTime: startOpt[Math.floor(Math.random()*startOpt.length)],
-        endTime:   endOpt[Math.floor(Math.random()*endOpt.length)],
-        status: "confirmed" as ShiftStatus,
-      })),
-    ];
-  }
-  return map;
-}
-
-/* ------------------------------------------------------------------
- * ルール②: manager-fixed
- *  店長1名のみを全日配置（スタッフ空欄）
- * ----------------------------------------------------------------*/
-function managerFixed(year: number, month: number): Record<string, Shift[]> {
-  const last = new Date(year, month, 0).getDate();
-  const map: Record<string, Shift[]> = {};
-  const manager = pickManager();
-
-  for (let d = 1; d <= last; d++) {
-    map[key(year, month, d)] = [
-      {
-        id: uuidv4(),
-        memberId: manager.id,
-        name: manager.name,
-        role: "manager",
-        startTime: "09:00",
-        endTime: "17:00",
-        status: "confirmed",
-      },
-    ];
-  }
-  return map;
-}
-
-/* ------------------------------------------------------------------
- * エクスポート関数: generateSchedule
- * ----------------------------------------------------------------*/
-export function generateSchedule(
+/* =====================================================================
+ * main – generateSchedule
+ * ====================================================================*/
+export async function generateSchedule(
   year: number,
-  month: number, // 1-index (1 = Jan)
-  rule: RuleName = "random-basic"
-): Record<string, Shift[]> {
-  switch (rule) {
-    case "random-basic":
-      return randomBasic(year, month);
-    case "manager-fixed":
-      return managerFixed(year, month);
-    default:
-      return {};
+  month: number,
+  rule: RuleName = "random-basic",
+): Promise<Schedule> {
+  if (rule !== "random-basic")
+    throw new Error(`rule '${rule}' not implemented`);
+
+  /* ---------- 1. 空の月テーブルを用意 ---------- */
+  const ym = `${year}-${two(month)}`;
+  const empty: Schedule["shifts"] = {};
+  for (let d = 1; d <= daysInMonth(year, month); d++) {
+    empty[`${ym}-${two(d)}`] = { memberAssignments: [] };
   }
+
+  /* ---------- 2. Firestore からメンバー取得 ---------- */
+  const snap = await getDocs(collection(db, "users"));
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as { id: string; role: string }[];
+  const member: { id: string; role: string }[] = list.filter(m => m.role === "member");
+  const admins: { id: string; role: string }[] = list.filter(m => m.role === "admin");
+  /* ---------- 3. 各日ごとにランダムで割り当て ---------- */
+  Object.keys(empty).forEach(dateKey => {
+    const assigns: memberAssignment[] = [];
+
+    // ⅰ) admin (1名固定) – 開店時間
+    const man = admins.length ? rand(admins) : rand(member);
+    assigns.push({
+      userId: man.id,
+      role: "admin",
+      startTime: "09:00",
+      endTime: "17:00",
+    });
+
+    // ⅱ) member – 0〜3 人（気分で）
+    const n = Math.min(member.length, Math.floor(Math.random() * 4)); // 0–3 かつ人数以下
+    const shuffled = [...member].sort(() => Math.random() - 0.5);     // スプレッドでコピー
+    for (let i = 0; i < n; i++) {
+      const s = shuffled[i];
+      if (!s) continue;                           // 念のため undefined ガード
+      const { start, end } = rand(SHIFTS);
+      assigns.push({
+        userId: s.id,
+        role: "member",
+        startTime: start,
+        endTime: end,
+      });
+    }
+
+    empty[dateKey].memberAssignments = assigns;
+  });
+
+  /* ---------- 4. Schedule オブジェクトを返す ---------- */
+  return {
+    scheduleId: uuid(),
+    month: ym,
+    generatedBy: "1",      // ← TODO: ログイン ID に置換
+    status: "draft",
+    generatedAt: Date.now(),
+    shifts: empty,
+    metadata: {
+      totalHours: 0,        // 簡略化（後で集計可）
+      coverageRate: 1,
+    },
+  };
 }
