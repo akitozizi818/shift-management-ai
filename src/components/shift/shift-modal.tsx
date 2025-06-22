@@ -1,3 +1,7 @@
+// --- code trimmed for brevity ---
+// Assuming ShiftCalendar and other components are already here.
+// Below we inject the stylish ShiftModal component overwriting the previous one.
+
 "use client";
 
 import { useEffect, useState } from "react";
