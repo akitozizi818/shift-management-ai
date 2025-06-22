@@ -2,12 +2,12 @@
  * Firestore – schedules コレクション汎用ユーティリティ
  * ------------------------------------------------------ */
 import {
-    addDoc, setDoc, updateDoc, getDocs, query, where,
+    setDoc, updateDoc, getDocs, query, where,
     limit, collection, doc, Timestamp,
     orderBy,
     deleteDoc
 } from "firebase/firestore";
-import { db } from "@/logic/firebase";
+import { db } from "@/lib/firebase";
 import type { memberAssignment, Schedule, ShiftRequest } from "@/types/shift";
 
 const col = () => collection(db, "schedules");

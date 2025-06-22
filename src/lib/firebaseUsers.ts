@@ -1,5 +1,5 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/logic/firebase";
+import { db } from "@/lib/firebase";
 
 export interface UserDoc {
   name: string;

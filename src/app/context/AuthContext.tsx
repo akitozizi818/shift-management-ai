@@ -8,7 +8,7 @@ import {
 import {
   doc, getDoc,
 } from "firebase/firestore";
-import { auth, db } from "@/logic/firebase";
+import { auth, db } from "@/lib/firebase";
 import { User } from "@/types/shift";
 
 interface AuthCtx {

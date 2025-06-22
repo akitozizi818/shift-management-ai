@@ -1,0 +1,23 @@
+{
+  "rule-001": {
+    "name": "基本勤務ルール",
+    "ruleType": "staffing",
+    "minStaffCount": 2,
+    "maxStaffCount": 4,
+    "maxConsecutiveDays": 5,
+    "workingHours": {
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "weeklyMaxHours": 40,
+    "monthlyMaxHours": 160,
+    "breakRules": {
+      "minWorkHoursForBreak": 6,
+      "breakDuration": 1
+    },
+    "isActive": true,
+    "priority": 1,
+    "createdAt": "2025-06-20T00:00:00Z",
+    "updatedAt": "2025-06-22T00:00:00Z"
+  }
+}

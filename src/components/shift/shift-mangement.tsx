@@ -18,8 +18,8 @@ import {
   deleteSchedule,
   fetchMyShiftRequests,
   fetchShiftRequestsByMonth,
-} from "@/logic/firebaseSchedule";
-import { generateSchedule, type RuleName } from "@/logic/scheduleGenerator";
+} from "@/lib/firebaseSchedule";
+import { generateSchedule, type RuleName } from "@/lib/scheduleGenerator";
 import type { Schedule, memberAssignment, RequestMap } from "@/types/shift";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePathname } from "next/navigation";

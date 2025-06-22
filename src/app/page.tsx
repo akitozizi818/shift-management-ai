@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { auth, db } from "@/logic/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
   doc,
   getDoc,

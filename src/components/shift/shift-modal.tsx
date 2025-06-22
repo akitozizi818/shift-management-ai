@@ -10,9 +10,9 @@ import { Plus, Trash2, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
 import { useAuth } from "@/app/context/AuthContext";
-import { saveShiftRequest } from "@/logic/saveShiftRequest";
-import { fetchPublished } from "@/logic/firebaseSchedule";
-import { fetchActiveUsers, UserDoc } from "@/logic/firebaseUsers";
+import { saveShiftRequest } from "@/lib/saveShiftRequest";
+import { fetchPublished } from "@/lib/firebaseSchedule";
+import { fetchActiveUsers, UserDoc } from "@/lib/firebaseUsers";
 
 import type { memberAssignment, Role, ShiftRequest } from "@/types/shift";
 

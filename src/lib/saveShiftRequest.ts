@@ -1,4 +1,4 @@
-import { db } from "@/logic/firebase";
+import { db } from "@/lib/firebase";
 import {
   doc,
   setDoc,

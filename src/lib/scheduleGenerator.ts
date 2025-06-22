@@ -1,4 +1,4 @@
-// src/logic/scheduleGenerator.ts
+// src/lib/scheduleGenerator.ts
 /* =====================================================================
  * Schedule Generator – “random-basic”         last update: 2025-06-xx
  * ====================================================================*/
