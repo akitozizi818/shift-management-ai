@@ -44,7 +44,7 @@ export default function AppHeader({
   const handleLogout = () => logout(router.push)
 
   return (
-    <header className="bg-gray-800/80 backdrop-blur-md border-b border-gray-700 px-6 py-4 sticky top-0 z-50">
+    <header className="bg-gray-800/80 backdrop-blur-md border-b border-gray-700 px-6 py-4 sticky top-0 z-50 w-100vw">
       <div className="flex items-center justify-between">
         {/* ---------- タイトル ---------- */}
         <h1 className="text-xl md:text-2xl font-bold text-gray-200">

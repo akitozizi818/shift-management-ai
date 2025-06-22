@@ -32,7 +32,7 @@ const nav: Record<Role, { name: string; href: string; icon: any; color: string }
 
 export default function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const items = nav[role];
 
   /* ----- utility ----- */
@@ -40,12 +40,12 @@ export default function AppSidebar({ role }: { role: Role }) {
 
   return (
     <>
-      {/* トグルボタン - 画面固定で少し大きめに */}
+      {/* トグルボタン */}
       <button
         onClick={() => setOpen((p) => !p)}
-        className="fixed top-4 left-4 z-[60] grid place-items-center rounded-xl
+        className="fixed top-5 left-4 z-[60] grid place-items-center rounded-xl
                    bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-lg
-                   w-10 h-10 hover:scale-110 transition-transform"
+                   w-8 h-8 hover:scale-110 transition-transform"
       >
         {open ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
       </button>
@@ -53,16 +53,12 @@ export default function AppSidebar({ role }: { role: Role }) {
       {/* サイドバー本体 */}
       <aside
         className={cls(
-          "min-h-screen h-100% overflow-hidden backdrop-blur-xl border-r border-white/20 transition-[width] duration-300",
-          "bg-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]", // ガラス感
+          "fixed top-0 left-0 min-h-screen h-full overflow-hidden backdrop-blur-xl border-r border-white/20 transition-[width] duration-300 z-[50]",
+          "bg-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] ", // ガラス感
           open ? "w-64" : "w-16"
-        )}
-      >
+        )}      >
         {/* ロゴエリア */}
         <div className="flex items-center gap-3 p-6">
-          {/* <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl">
-            <CalendarRange className="w-6 h-6 text-white" />
-          </div> */}
           <span
             className={cls(
               "text-white font-semibold text-lg whitespace-nowrap transition-opacity ml-10",
@@ -128,6 +124,19 @@ export default function AppSidebar({ role }: { role: Role }) {
           })}
         </nav>
       </aside>
+
+      {/* メインコンテンツに余白を追加 */}
+      <main
+        className={cls(
+          "transition-all duration-300",
+          open ? "ml-64" : "ml-16"
+        )}
+      >
+        {/* メインコンテンツ */}
+        <div className="">
+          {/* 他のコンテンツ */}
+        </div>
+      </main>
     </>
   );
 }
