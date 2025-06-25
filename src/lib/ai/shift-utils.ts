@@ -2,14 +2,14 @@
 import { shiftSampleData, ruleSampleData, memberMasterData } from './sample-data';
 
 // メンバー名を取得する関数
-export function getMemberName(lineId: string): string {
-  const member = memberMasterData.find(m => m.lineId === lineId);
+export function getMemberName(userId: string): string {
+  const member = memberMasterData.find(m => m.userId === userId);
   return member ? member.name : '不明なメンバー';
 }
 
 // LINE IDが有効かチェックする関数
-export function isValidMember(lineId: string): boolean {
-  return memberMasterData.some(m => m.lineId === lineId);
+export function isValidMember(userId: string): boolean {
+  return memberMasterData.some(m => m.userId === userId);
 }
 
 // 現在の日本時間を取得（Function calling用）
@@ -91,21 +91,21 @@ export function editShiftData(args: any): string {
   // オブジェクトから個別変数に分解
   const date = args.date;
   const action = args.action;
-  const lineId = args.lineId;
+  const userId = args.userId;
   const startTime = args.startTime;
   const endTime = args.endTime;
   
   console.log('[editShiftData] 分解後パラメータ:', {
     date,
     action,
-    lineId,
+    userId,
     startTime,
     endTime
   });
   
   // 必須パラメータのチェック
-  if (!date || !action || !lineId) {
-    return `エラー: 必須パラメータが不足しています。date: ${date}, action: ${action}, lineId: ${lineId}`;
+  if (!date || !action || !userId) {
+    return `エラー: 必須パラメータが不足しています。date: ${date}, action: ${action}, userId: ${userId}`;
   }
   
   // actionの値チェック
@@ -114,11 +114,11 @@ export function editShiftData(args: any): string {
   }
   
   // LINE IDの有効性チェック
-  if (!isValidMember(lineId)) {
-    return `無効なメンバーIDです: ${lineId}`;
+  if (!isValidMember(userId)) {
+    return `無効なメンバーIDです: ${userId}`;
   }
 
-  const memberName = getMemberName(lineId);
+  const memberName = getMemberName(userId);
   const shiftIndex = shiftSampleData.findIndex(s => s.date === date);
   
   console.log(`[editShiftData] 処理開始: ${memberName}さんの${action}処理 対象日: ${date}`);
@@ -126,9 +126,9 @@ export function editShiftData(args: any): string {
   let result: string;
   
   if (action === 'add') {
-    result = addMemberToShift(shiftIndex, date, lineId, memberName, startTime, endTime);
+    result = addMemberToShift(shiftIndex, date, userId, memberName, startTime, endTime);
   } else if (action === 'remove') {
-    result = removeMemberFromShift(shiftIndex, date, lineId, memberName);
+    result = removeMemberFromShift(shiftIndex, date, userId, memberName);
   } else {
     result = `無効な操作です: ${action}`;
   }
@@ -156,7 +156,7 @@ function formatTime(date: Date): string {
 function addMemberToShift(
   shiftIndex: number, 
   date: string, 
-  lineId: string, 
+  userId: string, 
   memberName: string, 
   startTime: string, 
   endTime: string
@@ -171,7 +171,7 @@ function addMemberToShift(
     // 新しい日付のシフトを作成
     shiftSampleData.push({
       date,
-      members: [{ lineId, name: memberName, startTime, endTime }]
+      members: [{ userId, name: memberName, startTime, endTime }]
     });
     return `${date}に${memberName}さんのシフト（${startTime}-${endTime}）を新規追加しました。`;
   }
@@ -179,12 +179,12 @@ function addMemberToShift(
   const shift = shiftSampleData[shiftIndex];
   
   // 既に同じメンバーがいないかチェック（LINE IDベース）
-  const existingMember = shift.members.find(m => m.lineId === lineId);
+  const existingMember = shift.members.find(m => m.userId === userId);
   if (existingMember) {
     return `${memberName}さんは既に${date}のシフトに入っています（${existingMember.startTime}-${existingMember.endTime}）。`;
   }
   
-  shift.members.push({ lineId, name: memberName, startTime, endTime });
+  shift.members.push({ userId, name: memberName, startTime, endTime });
   return `${date}に${memberName}さんのシフト（${startTime}-${endTime}）を追加しました。現在${shift.members.length}名体制です。`;
 }
 
@@ -192,7 +192,7 @@ function addMemberToShift(
 function removeMemberFromShift(
   shiftIndex: number, 
   date: string, 
-  lineId: string, 
+  userId: string, 
   memberName: string
 ): string {
   console.log(`[removeMemberFromShift] ${memberName}さんを${date}から削除`);
@@ -202,7 +202,7 @@ function removeMemberFromShift(
   }
   
   const shift = shiftSampleData[shiftIndex];
-  const memberIndex = shift.members.findIndex(m => m.lineId === lineId);
+  const memberIndex = shift.members.findIndex(m => m.userId === userId);
   
   if (memberIndex === -1) {
     return `${date}のシフトに${memberName}さんは入っていません。`;

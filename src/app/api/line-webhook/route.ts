@@ -1,3 +1,4 @@
+// src/app/api/line-webhook
 // 役割: LINEからのWebhookを受信し、基本的な処理を行う
 // Webhook URLの末尾に"/api/line-webhook"をつけること。
 
@@ -19,43 +20,137 @@ import type {
     TextMessage,
 } from '@line/bot-sdk'
 import { replyLineMessage } from '@/lib/line/client'
+import { LineMessageService } from '@/lib/services/line-message-service';
 // import { LineWebhookBody, LineMessageEvent } from '@/lib/line/types';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('LINE Webhook リクエスト受信');
 
-    /**
-     * 【本番用】テスト完了後、以下のコメントアウトを解除すること.
-    // 署名検証（セキュリティ）
-    const signature = request.headers.get('x-line-signature');
-    const body = await request.text(); // 署名検証には RequestBody を text として読み取る必要がある.
-
-    if (!verifySignature(body, signature)) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    // 【修正】リクエストボディを安全に取得
+    let body: string;
+    try {
+      body = await request.text();
+      console.log('受信したボディサイズ:', body.length);
+      console.log('受信したボディの最初の100文字:', body.substring(0, 100));
+    } catch (error) {
+      console.error('リクエストボディの読み取りエラー:', error);
+      return NextResponse.json({ error: 'Failed to read request body' }, { status: 400 });
     }
 
-    // Webhookボディをパース
-    const webhookBody: WebhookRequestBody = JSON.parse(body);
-     */
+    // 【修正】空のボディをチェック
+    if (!body || body.trim() === '') {
+      console.warn('空のリクエストボディを受信しました');
+      return NextResponse.json({ error: 'Empty request body' }, { status: 400 });
+    }
 
-    // 【開発用】署名検証をスキップし, 直接JSONとして処理する.
-    const webhookBody: WebhookRequestBody = await request.json();
+    // 【修正】JSONパースを安全に実行
+    let webhookBody: WebhookRequestBody;
+    try {
+      webhookBody = JSON.parse(body);
+      console.log('JSONパース成功:', {
+        eventsCount: webhookBody.events?.length || 0,
+        destination: webhookBody.destination
+      });
+    } catch (parseError) {
+      console.error('JSON解析エラー:', parseError);
+      console.error('パースしようとしたボディ:', body);
+      return NextResponse.json({ 
+        error: 'Invalid JSON format',
+        details: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+      }, { status: 400 });
+    }
 
-    // イベント処理のループ
+    // 【修正】webhookBodyの構造をチェック
+    if (!webhookBody || !Array.isArray(webhookBody.events)) {
+      console.error('不正なWebhookボディ構造:', webhookBody);
+      return NextResponse.json({ error: 'Invalid webhook structure' }, { status: 400 });
+    }
+
+    // userid確認用のログ
     for (const event of webhookBody.events) {
-      await handleLineEvent(event);
+      if (event.type === 'message' && event.source.type === 'user') {
+        const userId = event.source.userId;
+        console.log('User sent a message! User ID:', userId);
+      } else if (event.source.type === 'user') {
+        const userId = event.source.userId;
+        console.log('Other event from user! User ID:', userId, 'Event type:', event.type);
+      }
+    }
+    
+    // メッセージ処理サービスに委譲
+    try {
+      const messageService = new LineMessageService();
+      await messageService.handleWebhookEvents(webhookBody.events);
+    } catch (serviceError) {
+      console.error('メッセージサービスエラー:', serviceError);
+      // サービスエラーが発生してもWebhookは成功として返す
     }
 
     return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error('LINE Webhook ERROR:', error);
-    // if (error instanceof Error) {
-    //     console.error('Error message:', error.message);
-    // }
-    return NextResponse.json({ error: 'Internal ERROR' }, { status: 500 });
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
+
+// export async function POST(request: NextRequest) {
+//   try {
+
+//     /**
+//      * 【本番用】テスト完了後、以下のコメントアウトを解除すること.
+//     // 署名検証（セキュリティ）
+//     const signature = request.headers.get('x-line-signature');
+//     const body = await request.text(); // 署名検証には RequestBody を text として読み取る必要がある.
+
+//     if (!verifySignature(body, signature)) {
+//       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+//     }
+
+//     // Webhookボディをパース
+//     const webhookBody: WebhookRequestBody = JSON.parse(body);
+//      */
+
+//     // 【開発用】署名検証をスキップし, 直接JSONとして処理する.
+//     const webhookBody: WebhookRequestBody = await request.json();
+
+//     // // userid確認用
+//     // for (const event of webhookBody.events) {
+//     //   // イベントがメッセージタイプであり、かつユーザーからのものであるかを確認
+//     //   if (event.type === 'message' && event.source.type === 'user') {
+//     //     const userId = event.source.userId;
+//     //     console.log('User sent a message! User ID:', userId);
+//     //   }
+//     //   // 他のイベントタイプ（友だち追加など）のUser IDも取得したい場合は、ここに追加できます
+//     //   else if (event.source.type === 'user') {
+//     //       const userId = event.source.userId;
+//     //       console.log('Other event from user! User ID:', userId, 'Event type:', event.type);
+//     //   }
+//     // }
+    
+//     // メッセージ処理サービスに委譲（内部ライブラリ）
+//     const messageService = new LineMessageService();
+//     await messageService.handleWebhookEvents(webhookBody.events);
+
+//     return NextResponse.json({ success: true });
+
+//   } catch (error) {
+//     console.error('LINE Webhook ERROR:', error);
+//     // if (error instanceof Error) {
+//     //     console.error('Error message:', error.message);
+//     // }
+//     return NextResponse.json({ error: 'Internal ERROR' }, { status: 500 });
+//   }
+// }
 
 /**
  * 署名検証（セキュリティ）を行う関数
