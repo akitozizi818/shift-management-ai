@@ -1,5 +1,5 @@
 // lib/logout.ts
-import { auth } from "@/lib/firebase";          // auth を初期化済みで export している想定
+import { auth } from "@/lib/firebase/firebase";          // auth を初期化済みで export している想定
 import { signOut } from "firebase/auth";
 
 /**

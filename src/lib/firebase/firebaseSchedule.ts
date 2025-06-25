@@ -7,7 +7,7 @@ import {
     orderBy,
     deleteDoc
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase/firebase";
 import type { memberAssignment, Schedule, ShiftRequest } from "@/types/shift";
 
 const col = () => collection(db, "schedules");

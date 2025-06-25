@@ -11,8 +11,8 @@ import { v4 as uuidv4 } from "uuid";
 
 import { useAuth } from "@/app/context/AuthContext";
 import { saveShiftRequest } from "@/lib/saveShiftRequest";
-import { fetchPublished } from "@/lib/firebaseSchedule";
-import { fetchActiveUsers, UserDoc } from "@/lib/firebaseUsers";
+import { fetchPublished } from "@/lib/firebase/firebaseSchedule";
+import { fetchActiveUsers, UserDoc } from "@/lib/firebase/firebaseUsers";
 
 import type { memberAssignment, Role, ShiftRequest } from "@/types/shift";
 

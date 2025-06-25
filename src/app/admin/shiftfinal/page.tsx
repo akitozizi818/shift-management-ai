@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import ShiftCalendar from "@/components/shift/shift-calendar";
 import ShiftModal from "@/components/shift/shift-modal";
 
-import { fetchPublished, updateSchedule } from "@/lib/firebaseSchedule";
+import { fetchPublished, updateSchedule } from "@/lib/firebase/firebaseSchedule";
 import { type Schedule, type memberAssignment } from "@/types/shift";
 
 export default function FinalSchedulePage() {
