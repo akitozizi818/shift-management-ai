@@ -19,15 +19,11 @@ const db = getFirestore();
 
 // ルールを Firestore から取得
 async function fetchRuleFromFirestore(ruleName: string): Promise<Rule> {
-  const q = db
-    .collection("rules")
-    .where("name", "==", ruleName)
-    .where("isActive", "==", true)
-    .limit(1);
   console.log("Fetching rule:", ruleName);
-  const snap = await q.get();
-  if (snap.empty) throw new Error("該当ルールが見つかりません");
-  return snap.docs[0].data() as Rule;
+  const docRef = db.collection("rules").doc(ruleName);
+  const docSnap = await docRef.get();
+  if (!docSnap.exists) throw new Error("該当ルールが見つかりません");
+  return docSnap.data() as Rule;
 }
 
 // メイン関数

@@ -5,6 +5,7 @@ import { generateSchedule } from "@/lib/scheduleGenerator"; // サーバー専�
 export async function POST(req: NextRequest) {
   try {
     const { year, month ,ruleName} = await req.json();
+    console.log("🔄 スケジュール生成リクエスト:", { year, month, ruleName });
 
     if (!year || !month) {
       return NextResponse.json({ error: "year と month を指定してください" }, { status: 400 });

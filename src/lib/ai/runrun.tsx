@@ -1,6 +1,6 @@
 import { addSchedule } from "../firebase/firebaseSchedule";
 
-export  async function RunRun({ year = 2025, month = 6 ,ruleName = "基本勤務ルール" }) {
+export  async function RunRun({ year, month, ruleName = "rule-001" }: { year: number; month: number; ruleName?: string }) {
     console.log("🔄 シフト案を生成中...");
     //ローディング機能の追加
     try {   
@@ -16,9 +16,6 @@ export  async function RunRun({ year = 2025, month = 6 ,ruleName = "基本勤務
         console.log('✅ Gemini によって生成されたシフト:', schedule);
         await addSchedule(schedule);
 
-        // ▼ 必要なら即編集ビューやカレンダーに反映 
-        // setEditing(schedule);
-        // setDayAssignments(toMap(schedule.shifts));
     } catch (err) {
         console.error('❌ シフト生成エラー:', err);
         alert('シフト生成に失敗しました');

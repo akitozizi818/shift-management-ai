@@ -23,7 +23,7 @@ import { generateSchedule, RuleName } from "@/lib/scheduleGenerator";
 import type { Schedule, memberAssignment, RequestMap } from "@/types/shift";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePathname } from "next/navigation";
-import { RunRun } from "@/lib/test/runrun";
+import { RunRun } from "@/lib/ai/runrun";
 import FullScreenLoading from "../loading";
 
 
