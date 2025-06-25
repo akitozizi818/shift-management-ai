@@ -11,11 +11,11 @@ const cfg = {
 export const app = initializeApp(cfg);
 export const db  = getFirestore(app);
 
-console.log("Firebase initialized with config:", {
-  apiKey: cfg.apiKey,
-  authDomain: cfg.authDomain,
-    projectId: cfg.projectId,
-});
+// console.log("Firebase initialized with config:", {
+//   apiKey: cfg.apiKey,
+//   authDomain: cfg.authDomain,
+//     projectId: cfg.projectId,
+// });
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

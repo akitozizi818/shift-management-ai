@@ -4,7 +4,7 @@ import { CalendarRange, Edit, AlarmClock, Megaphone } from "lucide-react"
 import ModernMenuCard from "@/components/dashboard/modern-menu-card"
 import {  useEffect, useState } from "react"
 import { useAuth } from "../context/AuthContext"
-import { fetchPublished } from "@/logic/firebaseSchedule"
+import { fetchPublished } from "@/lib/firebase/firebaseSchedule"
 
 const MotionDiv = dynamic(
   () => import("framer-motion").then((m) => m.motion.div),

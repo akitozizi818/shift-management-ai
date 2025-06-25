@@ -51,30 +51,6 @@ export interface ShiftRequest {
 // types/shift.ts（など共通の型宣言ファイル）
 // ---------------------------------------------
 
-/** 個々の希望提出 (=1レコード) */
-export interface ShiftRequest {
-  requestId: string;                    // UUID
-  userId: string;                       // 希望提出者
-  month: string;                        // "YYYY-MM"
-  preferredDates: number[];             // 希望勤務日 (UNIX time ms)
-  unavailableDates: number[];           // 勤務不可日   (UNIX time ms)
-  preferredShifts: {                    // 日付ごとの希望時間
-    [date: string]: {
-      startTime: string;                // "HH:mm"
-      endTime: string;                  // "HH:mm"
-    };
-  };
-  status: "pending" | "processed" | "approved";
-  submittedAt: number;                  // UNIX time ms
-  processedAt?: number;
-  processedBy?: string;                 // 処理担当者ID
-}
-
-/**
- * RequestMap
- *  └─ key   : date (YYYY-MM-DD)  ※日単位でまとめる
- *  └─ value : その日に提出された希望配列
- */
 export type RequestMap = Record<string, ShiftRequest[]>;
 
 
@@ -90,4 +66,30 @@ export interface User{
     department?: string;   // 所属部署
     isActive: boolean;     // アクティブ状態
   };
+}
+
+
+
+
+export interface Rule {
+  ruleId: string;                          // UUID
+  name: string;                            // ルール名
+  ruleType: "staffing" | "schedule" | "constraint";
+  minStaffCount: number;                   // 最小スタッフ数
+  maxStaffCount?: number;                  // 最大スタッフ数（オプション）
+  maxConsecutiveDays: number;              // 最大連続勤務日数
+  workingHours: {                          // 営業時間
+    start: string;                         // "HH:mm"
+    end: string;                           // "HH:mm"
+  };
+  weeklyMaxHours?: number;                 // 週間最大労働時間（オプション）
+  monthlyMaxHours?: number;                // 月間最大労働時間（オプション）
+  breakRules?: {                           // 休憩ルール（オプション）
+    minWorkHoursForBreak: number;          // 最低勤務時間で休憩
+    breakDuration: number;                  // 休憩時間（分）
+  };
+  isActive: boolean;                       // ルールの有効状態
+  priority: number;                        // ルールの優先度（数値が小さいほど優先）
+  createdAt: number;                       // 作成日時（UNIXタイムスタンプ）
+  updatedAt: number;                       // 更新日時（UNIXタイムスタンプ）
 }
