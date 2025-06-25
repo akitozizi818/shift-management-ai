@@ -85,9 +85,6 @@ class LineClient {
     }
 }
 
-
-// 以下, 実際にエクスポートされる部分 ==============================================
-
 // 環境変数からアクセストークンを取得して、LINEクライアントのインスタンスを生成
 // このインスタンスをファイル内で共有して使用.
 const lineClient = new LineClient(process.env.LINE_CHANNEL_ACCESS_TOKEN || '');
