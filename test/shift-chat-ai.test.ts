@@ -87,20 +87,20 @@ async function testSystemPromptInterval() {
   console.log('=== システムプロンプト間隔テスト ===\n');
   
   const conversations = [
-    { member: '田中', lineId: 'U001', message: '明日代替出勤できます。' },
-    { member: '田中', lineId: 'U001', message: 'ありがとうございます' },
-    { member: '佐藤', lineId: 'U002', message: '6月26日はどうですか？' },
-    { member: '佐藤', lineId: 'U002', message: '了解しました' },
-    { member: '鈴木', lineId: 'U003', message: '他に何かありますか？' },
-    { member: '鈴木', lineId: 'U003', message: '6月27日の欠勤をお願いします' }
+    { member: '田中', userId: 'U001', message: '明日代替出勤できます。' },
+    { member: '田中', userId: 'U001', message: 'ありがとうございます' },
+    { member: '佐藤', userId: 'U002', message: '6月26日はどうですか？' },
+    { member: '佐藤', userId: 'U002', message: '了解しました' },
+    { member: '鈴木', userId: 'U003', message: '他に何かありますか？' },
+    { member: '鈴木', userId: 'U003', message: '6月27日の欠勤をお願いします' }
   ];
   
   for (let i = 0; i < conversations.length; i++) {
-    const { member, lineId, message } = conversations[i];
+    const { member, userId, message } = conversations[i];
     console.log(`--- メッセージ ${i + 1}回目 ---`);
-    console.log(`入力: ${member}さん（${lineId}）「${message}」`);
+    console.log(`入力: ${member}さん（${userId}）「${message}」`);
     
-    const response = await shiftAI.handleMemberMessage(member, message, lineId);
+    const response = await shiftAI.handleMemberMessage(member, message, userId);
     console.log(`応答: ${response}`);
     console.log(`現在のメッセージ数: ${shiftAI.getMessageCount()}\n`);
     
@@ -121,17 +121,17 @@ async function testCustomInterval() {
   shiftAI.setSystemPromptInterval(2);
   
   const conversations = [
-    { member: '田中', lineId: 'U001', message: '代替出勤希望です' },
-    { member: '田中', lineId: 'U001', message: 'ありがとう' },
-    { member: '佐藤', lineId: 'U002', message: '詳細を教えて' },
-    { member: '佐藤', lineId: 'U002', message: '了解です' }
+    { member: '田中', userId: 'U001', message: '代替出勤希望です' },
+    { member: '田中', userId: 'U001', message: 'ありがとう' },
+    { member: '佐藤', userId: 'U002', message: '詳細を教えて' },
+    { member: '佐藤', userId: 'U002', message: '了解です' }
   ];
   
   for (let i = 0; i < conversations.length; i++) {
-    const { member, lineId, message } = conversations[i];
+    const { member, userId, message } = conversations[i];
     console.log(`--- メッセージ ${i + 1}回目 ---`);
-    console.log(`${member}さん（${lineId}）: ${message}`);
-    await shiftAI.handleMemberMessage(member, message, lineId);
+    console.log(`${member}さん（${userId}）: ${message}`);
+    await shiftAI.handleMemberMessage(member, message, userId);
     console.log(`メッセージ数: ${shiftAI.getMessageCount()}\n`);
   }
   
@@ -139,7 +139,7 @@ async function testCustomInterval() {
 }
 
 // 無効なLINE IDのテスト
-async function testInvalidLineId() {
+async function testInvaliduserId() {
   const shiftAI = new ShiftManagementAI();
   
   console.log('=== 無効なLINE IDテスト ===\n');
@@ -166,7 +166,7 @@ if (require.main === module) {
     return testCustomInterval();
   }).then(() => {
     // 無効なLINE IDテスト
-    return testInvalidLineId();
+    return testInvaliduserId();
   }).catch(console.error);
   
   // 履歴確認も実行したい場合はコメントアウトを外す
