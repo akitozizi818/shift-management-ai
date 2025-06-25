@@ -18,11 +18,14 @@ import {
   deleteSchedule,
   fetchMyShiftRequests,
   fetchShiftRequestsByMonth,
-} from "@/logic/firebaseSchedule";
-import { generateSchedule, type RuleName } from "@/logic/scheduleGenerator";
+} from "@/lib/firebase/firebaseSchedule";
+import { generateSchedule, RuleName } from "@/lib/scheduleGenerator";
 import type { Schedule, memberAssignment, RequestMap } from "@/types/shift";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePathname } from "next/navigation";
+import { RunRun } from "@/lib/ai/runrun";
+import FullScreenLoading from "../loading";
+
 
 /* ---------- props ---------- */
 interface Props {
@@ -46,9 +49,9 @@ export default function ShiftManagementPage({
 
   const [year, setYear] = useState(selectedDate.getFullYear());
   const [month, setMonth] = useState(selectedDate.getMonth() + 1);
-  const [rule, setRule] = useState<RuleName>("random-basic");
+  // const [rule, setRule] = useState<RuleName>("random-basic");
   const ymKey = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
-
+  const rulelist = ["AI自動編成", "random-basic"];
   const { user, id } = useAuth();
   const currentUser = user && id ? user[id] : undefined;
 
@@ -74,7 +77,6 @@ export default function ShiftManagementPage({
       setMonth(mm);
     }
   };
-
   // --- ルーティングパラメータの取得（Next.js 13.4+） ---
   const path = usePathname(); // パラメータを取得
   useEffect(() => {
@@ -180,18 +182,23 @@ export default function ShiftManagementPage({
   useEffect(() => { reloadDrafts(); }, [year, month]);
   useEffect(() => { reloadPublished(); }, []);
 
+  const [loading, setLoading] = useState(false);
   /* ---------- draft 生成 ---------- */
   const generateDraft = async () => {
-    const sc = await generateSchedule(year, month, rule);
-    await addSchedule(sc);
-    await reloadDrafts();
+    // const sc = await generateSchedule(year, month, rule);
+    setLoading(true);
+    const sc = await RunRun({year, month}); // 追加：RunRun を呼び出す
+    setLoading(false);
+    // await addSchedule(sc);
+    // await reloadDrafts();
 
     // 生成したスケジュールの月に自動切り替え
-    const [yy, mm] = sc.month.split("-").map(Number);
-    setYear(yy);
-    setMonth(mm);
+    // const [yy, mm] = sc.month.split("-").map(Number);
+    // setYear(yy);
+    // setMonth(mm);
 
-    setEditing(sc);
+    // setEditing(sc);
+    console.log(sc)
   };
 
   /* ---------- 公開 / 非公開 ---------- */
@@ -228,7 +235,7 @@ export default function ShiftManagementPage({
   const normalizeKey = (raw: string) => {
     const [y, m, d] = raw.split("-");
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  };
+  }; 2
 
   /* シフト → dayAssignments 変換を共通化 */
   const toMap = (
@@ -290,6 +297,7 @@ export default function ShiftManagementPage({
   /* ---------- render ---------- */
   return (
     <div className="min-h-screen text-white">
+      {loading && (<FullScreenLoading/>)}
       {currentUser?.role === "admin" && !path.includes("/admin/shiftrequests") && (
         <motion.header
           initial={{ opacity: 0, y: -20 }}
@@ -307,9 +315,9 @@ export default function ShiftManagementPage({
             <select value={month} onChange={e => setMonth(+e.target.value)} className="bg-slate-700 px-3 py-2 rounded">
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m}>{m}</option>)}
             </select>
-            <select value={rule} onChange={e => setRule(e.target.value as RuleName)} className="bg-slate-700 px-3 py-2 rounded">
+            {/* <select value={rule} onChange={e => setRule(e.target.value as RuleName)} className="bg-slate-700 px-3 py-2 rounded">
               <option value="random-basic">AI 自動編成</option>
-            </select>
+            </select> */}
             <button onClick={generateDraft} className="bg-emerald-600 px-6 py-2 rounded hover:bg-emerald-700">
               生成
             </button>

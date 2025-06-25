@@ -12,11 +12,11 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { db } from "@/logic/firebase";
+import { db } from "@/lib/firebase/firebase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { memberAssignment, ShiftRequest } from "@/types/shift";
 import { usePathname } from "next/navigation";
-import { fetchMyShiftRequests } from "@/logic/firebaseSchedule";
+import { fetchMyShiftRequests } from "@/lib/firebase/firebaseSchedule";
 
 const MDiv = dynamic(() => import("framer-motion").then((m) => m.motion.div), {
   ssr: false,
@@ -77,7 +77,6 @@ export default function ShiftCalendar({
 
   useEffect(() => {
     if (!dayAssignments) return;
-
     const need = new Set<string>();
     Object.values(dayAssignments).forEach((arr) => {
       arr.forEach((a) => need.add(a.userId));

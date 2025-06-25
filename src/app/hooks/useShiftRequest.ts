@@ -6,7 +6,7 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
-import { db } from "@/logic/firebase";
+import { db } from "@/lib/firebase";
 import { ShiftRequest } from "@/types/shift";
 
 export const useShiftRequest = (userId: string, month: string) => {
