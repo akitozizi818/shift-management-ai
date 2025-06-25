@@ -92,7 +92,7 @@ async function handleLineEvent(event: WebhookEvent) {
             console.log('✉️ Replying to user...');
             // 受け取ったメッセージを加工して返信文を作成
             const replyText = 
-            `【テスト成功】受け取ったメッセージ："${event.message.text}"`;
+            `${event.message.text}！`;
 
             // 返信メッセージを送信する
             await replyLineMessage(event.replyToken, replyText);
@@ -110,6 +110,16 @@ async function handleLineEvent(event: WebhookEvent) {
     case 'follow':
         // ユーザーがbotを友達追加
         await handleFollowEvent(event);
+        break;
+  
+    case 'join':
+        console.log('Joined a group or room.')
+        try {
+          const replyText = 'ご招待いただきありがとうございます！\nシフト管理AIアシスタントです。\n\nシフトのことなら何でも話しかけてくださいね！\nよろしくお願いします。';
+          await replyLineMessage(event.replyToken, replyText);
+        } catch (e) {
+          console.error('Failed to send join reply: ', e);
+        }
         break;
 
     default:
