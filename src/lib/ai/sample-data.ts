@@ -1,7 +1,7 @@
 // src/lib/ai/sample-data.ts
 
 export interface ShiftMember {
-    lineId: string;
+    userId: string;
     name: string;
     startTime: string;
     endTime: string;
@@ -18,20 +18,20 @@ export interface ShiftMember {
   }
   
   export interface MemberData {
-    lineId: string;
+    userId: string;
     name: string;
   }
   
   // メンバーマスターデータ
   export const memberMasterData: MemberData[] = [
-    { lineId: 'U001', name: '田中' },
-    { lineId: 'U002', name: '佐藤' },
-    { lineId: 'U003', name: '鈴木' },
-    { lineId: 'U004', name: '山田' },
-    { lineId: 'U005', name: '高橋' },
-    { lineId: 'U006', name: '池田' },
-    { lineId: 'U007', name: '工藤' },
-    { lineId: 'U008', name: '河野' }
+    { userId: 'U001', name: '田中' },
+    { userId: 'U002', name: '佐藤' },
+    { userId: 'U003', name: '鈴木' },
+    { userId: 'U004', name: '山田' },
+    { userId: 'U005', name: '高橋' },
+    { userId: 'U006', name: '池田' },
+    { userId: 'U007', name: '工藤' },
+    { userId: 'w5fRmUhfAvapDosDa7uazoWwa8i1', name: '瞭人' }
   ];
   
   // サンプルシフトデータ（編集可能）
@@ -39,14 +39,14 @@ export interface ShiftMember {
     {
       date: '2025-06-24',
       members: [
-        { lineId: 'U001', name: '田中', startTime: '09:00', endTime: '17:00' },
-        { lineId: 'U002', name: '佐藤', startTime: '13:00', endTime: '21:00' }
+        { userId: 'U001', name: '田中', startTime: '09:00', endTime: '17:00' },
+        { userId: 'U002', name: '佐藤', startTime: '13:00', endTime: '21:00' }
       ]
     },
     {
       date: '2025-06-25',
       members: [
-        { lineId: 'U003', name: '鈴木', startTime: '09:00', endTime: '17:00' }
+        { userId: 'U003', name: '鈴木', startTime: '09:00', endTime: '17:00' }
       ]
     },
     {
@@ -56,14 +56,14 @@ export interface ShiftMember {
     {
       date: '2025-06-27',
       members: [
-        { lineId: 'U004', name: '山田', startTime: '09:00', endTime: '13:00' },
-        { lineId: 'U005', name: '高橋', startTime: '13:00', endTime: '17:00' }
+        { userId: 'U004', name: '山田', startTime: '09:00', endTime: '13:00' },
+        { userId: 'U005', name: '高橋', startTime: '13:00', endTime: '17:00' }
       ]
     },
     {
       date: '2025-06-28',
       members: [
-        { lineId: 'U001', name: '田中', startTime: '09:00', endTime: '17:00' }
+        { userId: 'U001', name: '田中', startTime: '09:00', endTime: '17:00' }
       ]
     }
   ];

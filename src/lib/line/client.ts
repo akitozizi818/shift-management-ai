@@ -1,3 +1,4 @@
+// src/lib/line/client.ts
 // 役割：LINE にメッセージを送信する機能
 
 /**
