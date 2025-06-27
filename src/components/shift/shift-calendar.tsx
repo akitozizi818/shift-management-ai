@@ -56,6 +56,7 @@ export default function ShiftCalendar({
     if (!currentUser || !id) return;
 
     if (pathname === "/member/shiftrequests") {
+
       fetchMyShiftRequests(id, yearMonth)
         .then(setRequests)
         .catch((err) => console.error("🔥 fetchMyShiftRequests error", err));
@@ -82,7 +83,9 @@ export default function ShiftCalendar({
       arr.forEach((a) => need.add(a.userId));
     });
 
-    const targets = Array.from(need).filter((uid) => !userNames[uid]);
+    const targets = Array.from(need).filter(
+      (uid) => uid && uid.trim() !== "" && !userNames[uid]
+    );
     if (targets.length === 0) return;
 
     const fetch = async () => {
@@ -231,13 +234,12 @@ export default function ShiftCalendar({
       {["日", "月", "火", "水", "木", "金", "土"].map((w, i) => (
         <div
           key={w}
-          className={`inline-flex w-[calc(100%/7)] py-2 text-center uppercase text-[10px] font-semibold tracking-widest border-b border-white/10 ${
-            i === 0
+          className={`inline-flex w-[calc(100%/7)] py-2 text-center uppercase text-[10px] font-semibold tracking-widest border-b border-white/10 ${i === 0
               ? "text-red-400"
               : i === 6
-              ? "text-blue-400"
-              : "text-white/50"
-          }`}
+                ? "text-blue-400"
+                : "text-white/50"
+            }`}
         >
           {w}
         </div>
@@ -266,8 +268,8 @@ export default function ShiftCalendar({
             const people = !dayAssignments
               ? peopleAll.filter((p) => p.uid === id)
               : viewMode === "all" || currentUser?.role === "admin"
-              ? peopleAll
-              : peopleAll.filter((p) => p.uid === id);
+                ? peopleAll
+                : peopleAll.filter((p) => p.uid === id);
 
             return (
               <motion.div
@@ -284,20 +286,17 @@ export default function ShiftCalendar({
                     onEditShift?.();
                   }
                 }}
-                className={`relative h-28 p-1.5 cursor-pointer transition-colors ${
-                  cur ? "bg-slate-900/60 hover:bg-indigo-900/40" : "bg-slate-800/40 text-white/40"
-                } ${sel ? "ring-2 ring-cyan-400" : ""} ${
-                  isToday ? "ring-2 ring-yellow-300" : ""
-                }`}
+                className={`relative h-28 p-1.5 cursor-pointer transition-colors ${cur ? "bg-slate-900/60 hover:bg-indigo-900/40" : "bg-slate-800/40 text-white/40"
+                  } ${sel ? "ring-2 ring-cyan-400" : ""} ${isToday ? "ring-2 ring-yellow-300" : ""
+                  }`}
               >
                 <span
-                  className={`absolute top-1 left-1 text-[10px] font-semibold ${
-                    isToday
+                  className={`absolute top-1 left-1 text-[10px] font-semibold ${isToday
                       ? "text-yellow-300"
                       : sel
-                      ? "text-cyan-300"
-                      : "text-white/70"
-                  }`}
+                        ? "text-cyan-300"
+                        : "text-white/70"
+                    }`}
                 >
                   {d.getDate()}
                 </span>
@@ -310,8 +309,8 @@ export default function ShiftCalendar({
                       p.status === "unavailable"
                         ? "bg-rose-500/20 text-rose-300"
                         : isMine
-                        ? "bg-cyan-400/20 text-cyan-300"
-                        : "bg-green-400/20 text-green-300";
+                          ? "bg-cyan-400/20 text-cyan-300"
+                          : "bg-green-400/20 text-green-300";
 
                     const formatTime = (t: string) => {
                       const [h, m] = t.split(":");
