@@ -17,7 +17,7 @@ import {
 export default function Home() {
   const router = useRouter();
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (role:string) => {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
@@ -32,24 +32,23 @@ export default function Home() {
         await setDoc(userRef, {
           name: user.displayName ?? "",
           email: user.email ?? "",
-          role: "member",
+          role: role,
           isActive: true,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-        router.push("/member");
+        router.push(`/${role}`);
       } else {
         // 存在する場合は最終ログイン日時だけ更新（任意）
         await setDoc(
           userRef,
           {
+            role: role,
             updatedAt: serverTimestamp(),
           },
           { merge: true },
         );
-        userSnap.data()?.role === "admin"
-          ? router.push("/admin")
-          : router.push("/member");
+        router.push(`/${role}`);
       }
 
     } catch (err) {
@@ -72,10 +71,16 @@ export default function Home() {
 
         <div className="mt-8 flex gap-4 justify-center">
           <button
-            onClick={handleGoogleLogin}
+            onClick={()=>handleGoogleLogin("admin")}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
           >
-            Googleでログイン
+            Googleでログイン(店長)
+          </button>
+          <button
+            onClick={()=>handleGoogleLogin("member")}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
+          >
+            Googleでログイン(バイト用)
           </button>
         </div>
       </div>

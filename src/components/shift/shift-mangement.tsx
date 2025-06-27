@@ -18,6 +18,7 @@ import {
   deleteSchedule,
   fetchMyShiftRequests,
   fetchShiftRequestsByMonth,
+  watchDrafts,
 } from "@/lib/firebase/firebaseSchedule";
 import { generateSchedule, RuleName } from "@/lib/scheduleGenerator";
 import type { Schedule, memberAssignment, RequestMap } from "@/types/shift";
@@ -25,6 +26,9 @@ import { useAuth } from "@/app/context/AuthContext";
 import { usePathname } from "next/navigation";
 import { RunRun } from "@/lib/ai/runrun";
 import FullScreenLoading from "../loading";
+import ShiftTable from "./shift-table";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/firebase";
 
 
 /* ---------- props ---------- */
@@ -179,7 +183,17 @@ export default function ShiftManagementPage({
     setDrafts({ [ymKey(y, m)]: list });
   };
 
-  useEffect(() => { reloadDrafts(); }, [year, month]);
+useEffect(() => {
+  const unsubscribe = watchDrafts(ymKey(year, month), (drafts) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [ymKey(year, month)]: drafts,
+    }));
+  });
+
+  return () => unsubscribe(); // クリーンアップで購読解除
+}, [year, month]);
+
   useEffect(() => { reloadPublished(); }, []);
 
   const [loading, setLoading] = useState(false);
@@ -187,17 +201,8 @@ export default function ShiftManagementPage({
   const generateDraft = async () => {
     // const sc = await generateSchedule(year, month, rule);
     setLoading(true);
-    const sc = await RunRun({year, month}); // 追加：RunRun を呼び出す
+    const sc = await RunRun({ year, month, ruleName: rule }); // 追加：RunRun を呼び出す
     setLoading(false);
-    // await addSchedule(sc);
-    // await reloadDrafts();
-
-    // 生成したスケジュールの月に自動切り替え
-    // const [yy, mm] = sc.month.split("-").map(Number);
-    // setYear(yy);
-    // setMonth(mm);
-
-    // setEditing(sc);
     console.log(sc)
   };
 
@@ -294,11 +299,36 @@ export default function ShiftManagementPage({
     return Object.values(uniq).sort((a, b) => a.generatedAt - b.generatedAt);
   }, [drafts, published, year, month]);
 
+  const [detailShiftOpen, setDetailShiftOpen] = useState(false);
+  const sortedAssignments = useMemo(() => {
+    if (!id) return dayAssignments;
+    const sorted: Record<string, memberAssignment[]> = {};
+    for (const [date, assignments] of Object.entries(dayAssignments)) {
+      sorted[date] = [...assignments].sort((a) => (a.userId === id ? -1 : 1));
+    }
+    return sorted;
+  }, [dayAssignments, id]);
+
+  const [rule, setRule] = useState<string>("");
+  const [ruleList, setRuleList] = useState<string[]>([]);
+  useEffect(() => {
+    const fetchRules = async () => {
+      const rulesRef = collection(db, "rules");
+      const snapshot = await getDocs(rulesRef);
+      const names = snapshot.docs
+        .map(doc => doc.data().name)   // name を抽出
+        .filter(name => typeof name === "string"); // 念のため型チェック
+      setRuleList(names);
+    };
+
+    fetchRules();
+  }, []);
+
   /* ---------- render ---------- */
   return (
     <div className="min-h-screen text-white">
-      {loading && (<FullScreenLoading/>)}
-      {currentUser?.role === "admin" && !path.includes("/admin/shiftrequests") && (
+      {loading && (<FullScreenLoading />)}
+      {currentUser?.role === "admin" && !path.includes("/admin/shiftrequests") && !path.includes("/member/shiftrequests") && (
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -315,9 +345,13 @@ export default function ShiftManagementPage({
             <select value={month} onChange={e => setMonth(+e.target.value)} className="bg-slate-700 px-3 py-2 rounded">
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m}>{m}</option>)}
             </select>
-            {/* <select value={rule} onChange={e => setRule(e.target.value as RuleName)} className="bg-slate-700 px-3 py-2 rounded">
-              <option value="random-basic">AI 自動編成</option>
-            </select> */}
+            <select value={rule} onChange={e => setRule(e.target.value as string)} className="bg-slate-700 px-3 py-2 rounded">
+              {ruleList.map((r, i) => (
+                <option key={i} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
             <button onClick={generateDraft} className="bg-emerald-600 px-6 py-2 rounded hover:bg-emerald-700">
               生成
             </button>
@@ -365,19 +399,7 @@ export default function ShiftManagementPage({
         </motion.header>
       )}
 
-      {/* calendar */}
-      <main className="max-w-6xl mx-auto p-6">
-        <ShiftCalendar
-          selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
-          onEditShift={
-            request && path.includes("/admin/shiftrequests")
-              ? () => { }
-              : () => setModalOpen(true)
-          }
-          dayAssignments={dayAssignments} // リクエストモードでは空のマップを渡す
-        />
-      </main>
+
 
       {/* modal */}
       {modalOpen && (
@@ -389,6 +411,54 @@ export default function ShiftManagementPage({
           setDayAssignments={setDayAssignments}
         />
       )}
-    </div>
+
+      <main className="max-w-6xl mx-auto p-6">
+
+        {path.includes("/admin/shiftcreate") || path.includes("/admin/shiftrequests") ? (
+          <>
+            <button
+              onClick={() => setDetailShiftOpen((prev) => !prev)}
+              className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition  mb-4 ml-6"
+            >
+              {detailShiftOpen ? `月間のシフト${path.includes("/admin/shiftrequests") ? "希望" : ""}表` : `1日の詳細なシフト${path.includes("/admin/shiftrequests") ? "希望" : ""}`}を見る
+            </button>
+            {detailShiftOpen ? (
+              <ShiftTable
+                selectedMonth={`${year}-${String(month).padStart(2, "0")}`}
+                allAssignments={dayAssignments}
+              />
+            ) : (
+              <ShiftCalendar
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onEditShift={
+                  request && path.includes("/admin/shiftrequests")
+                    ? () => { }
+                    : () => setModalOpen(true)
+                }
+                dayAssignments={sortedAssignments} // リクエストモードでは空のマップを渡す
+              />
+            )}
+          </>
+        ) : (
+          <div className="mt-10">
+            <ShiftCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              onEditShift={
+                request && path.includes("/admin/shiftrequests")
+                  ? () => { }
+                  : () => setModalOpen(true)
+              }
+              dayAssignments={sortedAssignments} // リクエストモードでは空のマップを渡す
+            />
+          </div>
+        )
+        }
+
+      </main>
+
+
+    </div >
   );
 }

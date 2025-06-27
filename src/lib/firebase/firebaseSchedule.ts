@@ -5,7 +5,8 @@ import {
     setDoc, updateDoc, getDocs, query, where,
     limit, collection, doc, Timestamp,
     orderBy,
-    deleteDoc
+    deleteDoc,
+    onSnapshot
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/firebase";
 import type { memberAssignment, Schedule, ShiftRequest } from "@/types/shift";
@@ -32,8 +33,15 @@ export async function listSchedules(): Promise<Schedule[]> {
 }
 
 /* 現在 published のスケジュールを 1 件返す（なければ null） */
+export async function fetchArchived(): Promise<Schedule | null> {
+    const q = query(col(), where("status", "==", "archived"), limit(1));
+    const snap = await getDocs(q);
+    return snap.docs.length ? (snap.docs[0].data() as Schedule) : null;
+}
+
+/* 現在 published のスケジュールを 1 件返す（なければ null） */
 export async function fetchPublished(): Promise<Schedule | null> {
-    const q = query(col(), where("status", "==", "published"), limit(1));
+    const q = query(col(), where("status", "==", "published "), limit(1));
     const snap = await getDocs(q);
     return snap.docs.length ? (snap.docs[0].data() as Schedule) : null;
 }
@@ -112,3 +120,26 @@ export const listDraftSchedulesByMonth = async (
         .sort((a, b) => b.generatedAt - a.generatedAt); // DESC
 };
 
+
+
+export function watchDrafts(month: string, callback: (drafts: Schedule[]) => void) {
+  const q = query(
+    collection(db, "schedules"),
+    where("month", "==", month),
+    where("status", "==", "draft")
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const drafts: Schedule[] = snapshot.docs.map((doc) => ({
+      ...(doc.data() as Schedule),
+      scheduleId: doc.id,
+    }));
+    callback(drafts);
+  });
+}
+
+export const fetchAllArchived = async (): Promise<Schedule[]> => {
+  const q = query(collection(db, "schedules"), where("status", "==", "archived"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ scheduleId: d.id, ...d.data() } as Schedule));
+};

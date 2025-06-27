@@ -69,27 +69,19 @@ export interface User{
 }
 
 
-
-
 export interface Rule {
-  ruleId: string;                          // UUID
-  name: string;                            // ルール名
-  ruleType: "staffing" | "schedule" | "constraint";
-  minStaffCount: number;                   // 最小スタッフ数
-  maxStaffCount?: number;                  // 最大スタッフ数（オプション）
-  maxConsecutiveDays: number;              // 最大連続勤務日数
+  ruleId: string;                          // UUID → id フィールドに対応
+  name: string;                            // "基本勤務ルール_ver1"
+  description?: string;                    // 説明文（画像の description）
+  minStaffCount: number;                   // 最小スタッフ数 → minStaff
+  maxStaffCount?: number;                  // 最大スタッフ数 → maxStaff
   workingHours: {                          // 営業時間
-    start: string;                         // "HH:mm"
-    end: string;                           // "HH:mm"
+    start: string;                         // "13:00"
+    end: string;                           // "22:00"
   };
-  weeklyMaxHours?: number;                 // 週間最大労働時間（オプション）
-  monthlyMaxHours?: number;                // 月間最大労働時間（オプション）
-  breakRules?: {                           // 休憩ルール（オプション）
-    minWorkHoursForBreak: number;          // 最低勤務時間で休憩
-    breakDuration: number;                  // 休憩時間（分）
-  };
-  isActive: boolean;                       // ルールの有効状態
-  priority: number;                        // ルールの優先度（数値が小さいほど優先）
-  createdAt: number;                       // 作成日時（UNIXタイムスタンプ）
-  updatedAt: number;                       // 更新日時（UNIXタイムスタンプ）
+  isAllDay: boolean;                       // isAllDay: false
+  isActive: boolean;                       // Firestore側にない → default true などでも可
+  priority: number;                        // 優先度 → Firestore側にない → default 0 などでも可
+  createdAt: number;                       // UNIXタイムスタンプに変換すべき（今は日付文字列）
+  updatedAt?: number;                      // 任意（まだない）
 }
