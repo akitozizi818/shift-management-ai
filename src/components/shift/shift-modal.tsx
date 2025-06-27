@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
@@ -21,7 +21,7 @@ interface Props {
   onClose: () => void;
   selectedDate: Date;
   dayAssignments: Record<string, memberAssignment[]>;
-  setDayAssignments: (m: Record<string, memberAssignment[]>) => void;
+  setDayAssignments: Dispatch<SetStateAction<Record<string, memberAssignment[]>>>;
 }
 
 /* ---------- helpers ---------- */
