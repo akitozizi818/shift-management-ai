@@ -17,16 +17,17 @@ type Role = "admin" | "member";
 
 const nav: Record<Role, { name: string; href: string; icon: any; color: string }[]> = {
   admin: [
-    { name: "ダッシュボード", href: "/admin", icon: Home,         color: "from-indigo-500 to-purple-500" },
-    { name: "確定シフト",     href: "/admin/shiftfinal",  icon: CalendarRange, color: "from-blue-500 to-cyan-500" },
-    { name: "シフト作成",     href: "/admin/shiftcreate", icon: PencilRuler,   color: "from-emerald-500 to-lime-500" },
-    { name: "ルール作成",     href: "/admin/createRule",  icon: Settings,      color: "from-fuchsia-500 to-pink-500" },
-    { name: "希望一覧",       href: "/admin/shiftrequests", icon: Users2,     color: "from-orange-500 to-amber-500" },
+    { name: "ダッシュボード", href: "/admin", icon: Home, color: "from-indigo-500 to-purple-500" },
+    { name: "確定シフト", href: "/admin/shiftfinal", icon: CalendarRange, color: "from-blue-500 to-cyan-500" },
+    { name: "シフト作成", href: "/admin/shiftcreate", icon: PencilRuler, color: "from-emerald-500 to-lime-500" },
+    { name: "ルール作成", href: "/admin/createRule", icon: Settings, color: "from-fuchsia-500 to-pink-500" },
+    { name: "希望一覧", href: "/admin/shiftrequests", icon: Users2, color: "from-orange-500 to-amber-500" },
+    { name: "希望登録", href: "/member/shiftrequests", icon: Edit, color: "from-emerald-500 to-lime-500" },
   ],
   member: [
-    { name: "ダッシュボード", href: "/member",               icon: Home,         color: "from-indigo-500 to-purple-500" },
-    { name: "確定シフト",     href: "/member/shiftschedule", icon: CalendarRange, color: "from-blue-500 to-cyan-500" },
-    { name: "希望登録",       href: "/member/shiftrequests", icon: Edit,         color: "from-emerald-500 to-lime-500" },
+    { name: "ダッシュボード", href: "/member", icon: Home, color: "from-indigo-500 to-purple-500" },
+    { name: "確定シフト", href: "/member/shiftschedule", icon: CalendarRange, color: "from-blue-500 to-cyan-500" },
+    { name: "希望登録", href: "/member/shiftrequests", icon: Edit, color: "from-emerald-500 to-lime-500" },
   ],
 };
 

@@ -18,12 +18,25 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // ルールを Firestore から取得
-async function fetchRuleFromFirestore(ruleName: string): Promise<Rule> {
+export async function fetchRuleFromFirestore(ruleName: string): Promise<Rule> {
   console.log("Fetching rule:", ruleName);
-  const docRef = db.collection("rules").doc(ruleName);
-  const docSnap = await docRef.get();
-  if (!docSnap.exists) throw new Error("該当ルールが見つかりません");
-  return docSnap.data() as Rule;
+
+  const snapshot = await db
+    .collection("rules")
+    .where("name", "==", ruleName)
+    .get();
+
+  if (snapshot.empty) {
+    throw new Error(`ルール「${ruleName}」が見つかりません`);
+  }
+
+  const doc = snapshot.docs[0];
+  const data = doc.data();
+
+  return {
+    ...data,
+    ruleId: doc.id, // ← 型に ruleId があればセット
+  } as Rule;
 }
 
 // メイン関数

@@ -4,7 +4,7 @@ import { CalendarRange, Edit, AlarmClock, Megaphone } from "lucide-react"
 import ModernMenuCard from "@/components/dashboard/modern-menu-card"
 import {  useEffect, useState } from "react"
 import { useAuth } from "../context/AuthContext"
-import { fetchPublished } from "@/lib/firebase/firebaseSchedule"
+import { fetchArchived } from "@/lib/firebase/firebaseSchedule"
 
 const MotionDiv = dynamic(
   () => import("framer-motion").then((m) => m.motion.div),
@@ -39,7 +39,7 @@ export default function MemberHomePage() {
     const fetchShiftData = async () => {
       try {
         // 公開中のスケジュールを取得
-        const publishedSchedule = await fetchPublished();
+        const publishedSchedule = await fetchArchived();
         if (!publishedSchedule) {
           console.log("No published schedule found.");
           return;

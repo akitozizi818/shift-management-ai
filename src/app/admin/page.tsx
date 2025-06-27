@@ -1,5 +1,5 @@
 "use client"
-import { CalendarRange, PencilRuler, Users2, Settings } from "lucide-react"
+import { CalendarRange, PencilRuler, Users2, Settings, Edit } from "lucide-react"
 import dynamic from "next/dynamic"
 import ModernMenuCard from "../../components/dashboard/modern-menu-card"
 import { useAuth } from "../context/AuthContext"
@@ -32,8 +32,15 @@ const menuItems = [
     href: "/admin/shiftrequests",
     icon: Users2,
     label: "バイトの希望一覧",
-    description: "スタッフからのシフト希望を確認・承認できます",
+    description: "自分・スタッフのシフト希望を確認できます",
     color: "bg-gradient-to-br from-orange-500 to-orange-600",
+  },
+    {
+    href: "/member/shiftrequests",
+    icon: Edit,
+    label: "バイトの希望一覧",
+    description: "シフト希望を登録できます。",
+    color: "bg-gradient-to-br from-emerald-500 to-emerald-600",
   },
 ]
 
