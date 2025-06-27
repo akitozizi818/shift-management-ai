@@ -11,6 +11,7 @@
  * ・基本的なイベント処理（フォロー/アンフォロー等）
  */
 
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type {
     WebhookRequestBody,
@@ -21,13 +22,14 @@ import type {
 } from '@line/bot-sdk'
 import { replyLineMessage } from '@/lib/line/client'
 import { LineMessageService } from '@/lib/services/line-message-service';
-// import { LineWebhookBody, LineMessageEvent } from '@/lib/line/types';
 
+
+/**
+ * LINE からの webhook リクエストを処理するメイン関数
+ */
 export async function POST(request: NextRequest) {
   try {
     console.log('LINE Webhook リクエスト受信');
-
-    // 【修正】リクエストボディを安全に取得
     let body: string;
     try {
       body = await request.text();
@@ -38,13 +40,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to read request body' }, { status: 400 });
     }
 
-    // 【修正】空のボディをチェック
+    // 署名検証 ===========================================================================
+    const signature = request.headers.get('x-line-signature');
+    console.log('X-Line-Signature:', signature)
+
+    if (!verifySignature(body, signature)) {
+      // 署名が不正な場合は, 401 Unauthorize エラーを返す.
+      console.warn('不正な署名を持つリクエストを拒否しました.');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+    // ===================================================================================
+
+    // 空のボディをチェック
     if (!body || body.trim() === '') {
       console.warn('空のリクエストボディを受信しました');
       return NextResponse.json({ error: 'Empty request body' }, { status: 400 });
     }
 
-    // 【修正】JSONパースを安全に実行
+    // JSONパースを安全に実行
     let webhookBody: WebhookRequestBody;
     try {
       webhookBody = JSON.parse(body);
@@ -61,7 +74,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 【修正】webhookBodyの構造をチェック
+    // webhookBodyの構造をチェック
     if (!webhookBody || !Array.isArray(webhookBody.events)) {
       console.error('不正なWebhookボディ構造:', webhookBody);
       return NextResponse.json({ error: 'Invalid webhook structure' }, { status: 400 });
@@ -103,125 +116,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// export async function POST(request: NextRequest) {
-//   try {
-
-//     /**
-//      * 【本番用】テスト完了後、以下のコメントアウトを解除すること.
-//     // 署名検証（セキュリティ）
-//     const signature = request.headers.get('x-line-signature');
-//     const body = await request.text(); // 署名検証には RequestBody を text として読み取る必要がある.
-
-//     if (!verifySignature(body, signature)) {
-//       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-//     }
-
-//     // Webhookボディをパース
-//     const webhookBody: WebhookRequestBody = JSON.parse(body);
-//      */
-
-//     // 【開発用】署名検証をスキップし, 直接JSONとして処理する.
-//     const webhookBody: WebhookRequestBody = await request.json();
-
-//     // // userid確認用
-//     // for (const event of webhookBody.events) {
-//     //   // イベントがメッセージタイプであり、かつユーザーからのものであるかを確認
-//     //   if (event.type === 'message' && event.source.type === 'user') {
-//     //     const userId = event.source.userId;
-//     //     console.log('User sent a message! User ID:', userId);
-//     //   }
-//     //   // 他のイベントタイプ（友だち追加など）のUser IDも取得したい場合は、ここに追加できます
-//     //   else if (event.source.type === 'user') {
-//     //       const userId = event.source.userId;
-//     //       console.log('Other event from user! User ID:', userId, 'Event type:', event.type);
-//     //   }
-//     // }
-    
-//     // メッセージ処理サービスに委譲（内部ライブラリ）
-//     const messageService = new LineMessageService();
-//     await messageService.handleWebhookEvents(webhookBody.events);
-
-//     return NextResponse.json({ success: true });
-
-//   } catch (error) {
-//     console.error('LINE Webhook ERROR:', error);
-//     // if (error instanceof Error) {
-//     //     console.error('Error message:', error.message);
-//     // }
-//     return NextResponse.json({ error: 'Internal ERROR' }, { status: 500 });
-//   }
-// }
-
 /**
- * 署名検証（セキュリティ）を行う関数
- * 注: このままでは機能しない. 実際の検証ロジックを実装する必要がある.
- * 開発中は true を返すことで一時的に無効化している.
+ * 署名検証を行う関数
+ * @param body - リクエストボディ（文字列）
+ * @param signature - LINEから送られてきた署名
+ * @returns 検証が成功した場合は true, 失敗した場合は false
  */
 const verifySignature = (body: string, signature: string | null): boolean => {
-    console.log("Signature verification is currently disabled for testing.");
-    return true;
-};
+  const channelSecret = process.env.LINE_CHANNEL_SECRET;
 
-
-/**
- * LINEイベントを適切な処理に振り分けるための関数（メッセージは他のシステムに転送するだけ）
- * @param event
- */
-async function handleLineEvent(event: WebhookEvent) {
-  switch (event.type) {
-    // メッセージイベントの場合
-    case 'message':
-        // テキストメッセージでなければ処理を中断
-        if (event.message.type !== 'text') {
-            console.log(`Received non-text message: ${event.message.type}`);
-            return;
-        }
-
-        console.log('receivedMessage:', {
-            userId: event.source.userId,
-            message: event.message.text,
-            timestamp: event.timestamp,
-        })
-
-        try {
-            console.log('✉️ Replying to user...');
-            // 受け取ったメッセージを加工して返信文を作成
-            const replyText = 
-            `${event.message.text}！`;
-
-            // 返信メッセージを送信する
-            await replyLineMessage(event.replyToken, replyText);
-            console.log('Reply sent successfully.');
-
-        } catch (replyError) {
-            console.error('Failed to send reply:', replyError);
-        }
-
-
-        // メッセージを受信したら、AI処理システムに転送
-        await forwardToAISystem(event as MessageEvent);
-        break;
-
-    case 'follow':
-        // ユーザーがbotを友達追加
-        await handleFollowEvent(event);
-        break;
-  
-    case 'join':
-        console.log('Joined a group or room.')
-        try {
-          const replyText = 'ご招待いただきありがとうございます！\nシフト管理AIアシスタントです。\n\nシフトのことなら何でも話しかけてくださいね！\nよろしくお願いします。';
-          await replyLineMessage(event.replyToken, replyText);
-        } catch (e) {
-          console.error('Failed to send join reply: ', e);
-        }
-        break;
-
-    default:
-        // その他のイベントは無視
-        break;
+  if (!channelSecret || !signature) {
+    console.error('Channel Secretまたは署名が見つかりません。');
+    return false;
   }
-}
+
+  const generatedSignature = crypto
+    .createHmac('SHA256', channelSecret)
+    .update(body)
+    .digest('base64');
+  return signature === generatedSignature;
+};
 
 /**
  * フォローイベント（友達追加）を主に処理する関数
