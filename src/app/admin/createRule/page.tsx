@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import RuleModal, { Rule, RuleData } from './ruleModal';
-import { db } from '@/logic/firebase';
+import { db } from '@/lib/firebase/firebase';
 import {
     collection,
     query,
