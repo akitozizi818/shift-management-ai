@@ -5,7 +5,7 @@ export interface memberAssignment {
   userId: string;
   startTime: string;
   endTime: string;
-  role: string;
+  role?: string;
 }
 
 export interface Schedule {

@@ -1,25 +1,27 @@
 // src/lib/ai/shift-utils.ts
 import { shiftSampleData, ruleSampleData, memberMasterData } from './sample-data';
-import { fetchUserByLineUserId } from '../firebase/firebaseUsers';
+import { fetchUserById ,UserDoc} from '../firebase/firebaseUsers';
 import { fetchPublished, updateSchedule } from '../firebase/firebaseSchedule';
 import { fetchLatestRule } from '../firebase/firebaseRules';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from 'firebase/firestore'; // query, orderBy, limit, getDocs を追加
+import { sendLineMessage } from '../line/client'; // sendLineMessage をインポート
 
-// メンバー名を取得する関数
+//userIdからメンバーオブジェクトの取得
+export async function getMemberInfo(userId: string): Promise<{ id: string; data: UserDoc } | null> {
+  const member = await fetchUserById(userId);
+  return member; // fetchUserById は既に適切な型を返しているので、そのまま返します。
+}
+
+// 必要に応じて、名前だけが必要な場合は以下のようにラップすることもできます。
 export async function getMemberName(userId: string): Promise<string> {
-  const member = await fetchUserByLineUserId(userId);
-  return member ? member.data.name : '不明なメンバー';
+  const memberInfo = await getMemberInfo(userId);
+  return memberInfo ? memberInfo.data.name : '不明なメンバー';
 }
 
-// メンバーの役割を取得する関数
+// 必要に応じて、役割だけが必要な場合は以下のようにラップすることもできます。
 export async function getMemberRole(userId: string): Promise<string> {
-  const member = await fetchUserByLineUserId(userId);
-  return member ? member.data.role : '不明な役割';
-}
-
-// LINE IDが有効かチェックする関数
-export async function isValidMember(userId: string): Promise<boolean> {
-  const member = await fetchUserByLineUserId(userId);
-  return !!member; // メンバーが存在すればtrue、存在しなければfalse
+  const memberInfo = await getMemberInfo(userId);
+  return memberInfo ? memberInfo.data.role : '不明な役割';
 }
 
 // 現在の日本時間を取得（Function calling用）
@@ -70,9 +72,12 @@ export async function getShiftData(args: any): Promise<string> {
     return `${date}は現在誰もシフトに入っていません（人員不足状態）。`;
   }
   
-  const memberList = shift.memberAssignments.map(m => 
-    `${getMemberName(m.userId)}さん: ${m.startTime}-${m.endTime}`
-  ).join(', ');
+  const memberNames = await Promise.all(shift.memberAssignments.map(async m => {
+    const name = await getMemberName(m.userId); // ここで await を追加
+    return `${name}さん: ${m.startTime}-${m.endTime}`;
+  }));
+
+  const memberList = memberNames.join(', ');
   
   const result = `${date}のシフト状況: ${memberList} (合計${shift.memberAssignments.length}名)`;
   console.log('[getShiftData] 結果:', result);
@@ -135,14 +140,8 @@ export async function editShiftData(args: any): Promise<string> {
   if (action !== 'add' && action !== 'remove') {
     return `エラー: 無効なアクションです: ${action}`;
   }
-  
-  // LINE IDの有効性チェック
-  if (!isValidMember(userId)) {
-    return `無効なメンバーIDです: ${userId}`;
-  }
 
   const memberName = await getMemberName(userId);
-  const memberRole = await getMemberRole(userId);
   const schedule = await fetchPublished();
   if (!schedule) {
     return 'エラー: 公開されたスケジュールが存在しません。';
@@ -169,7 +168,7 @@ export async function editShiftData(args: any): Promise<string> {
       return 'シフト追加には開始時間と終了時間が必要です。';
     }
     
-    shifts[date].memberAssignments.push({ userId, startTime, endTime, role: memberRole });
+    shifts[date].memberAssignments.push({ userId, startTime, endTime});
     const newShiftCount = shifts[date].memberAssignments.length;
     result = `${date}に${memberName}さんのシフト（${startTime}-${endTime}）を追加しました。現在${newShiftCount}名体制です。`;
   } else if (action === 'remove') {
@@ -215,67 +214,89 @@ function formatTime(date: Date): string {
   return `${hour}:${minute}`;
 }
 
-// ヘルパー関数：メンバー追加
-function addMemberToShift(
-  shiftIndex: number, 
-  date: string, 
-  userId: string, 
-  memberName: string, 
-  startTime: string, 
-  endTime: string
-): string {
-  console.log(`[addMemberToShift] ${memberName}さんを${date} ${startTime}-${endTime}で追加`);
-  
-  if (!startTime || !endTime) {
-    return 'シフト追加には開始時間と終了時間が必要です。';
-  }
 
-  if (shiftIndex === -1) {
-    // 新しい日付のシフトを作成
-    shiftSampleData.push({
-      date,
-      members: [{ userId, name: memberName, startTime, endTime }]
+// Lineメッセージを送信するダミー関数（実際にはLine Messaging APIの呼び出しを実装します）
+export async function shiftCallOut(args: any): Promise<string> {
+  console.log('[shiftCallOut] 受信引数:', args);
+  
+  // パラメータの存在チェック
+  if (!args || typeof args !== 'object') {
+    return "不正なパラメータです";
+  }
+  const message = args.message;
+
+  const groupId = "Cbf06af635b95d3f78b0afdd1036d7f9d";
+  // **ここにLine Messaging APIを呼び出す実際のロジックを実装します。**
+  // 例: Line APIサービスをインポートして呼び出す
+  // import { LineMessagingService } from './services/line-messaging-service';
+  // const lineService = new LineMessagingService();
+  // try {
+  //   await lineService.pushMessage(message); // またはbroadcastMessageなど
+  //   return true;
+  // } catch (error) {
+  //   console.error("Lineメッセージ送信失敗:", error);
+  //   return false;
+  // }
+
+  // 仮の処理として、Firestoreにログを記録する例
+  const db = getFirestore();
+  try {
+    // sendLineMessage 関数を呼び出してLINEグループにメッセージをプッシュ送信
+    await sendLineMessage(groupId, message); 
+
+    await addDoc(collection(db, "line_call_out_message_logs"), {
+      message: message,
+      timestamp: serverTimestamp(),
+      status: "sent_mock" // 実際の送信結果に応じて変更
     });
-    return `${date}に${memberName}さんのシフト（${startTime}-${endTime}）を新規追加しました。`;
+    return "送信に成功しました";
+  } catch (error) {
+    console.error("Lineメッセージ送信失敗:", error);
+    // 失敗した場合もFirestoreにログを記録
+    const db = getFirestore();
+    try {
+      await addDoc(collection(db, "line_call_out_message_logs"), {
+        message: message,
+        timestamp: serverTimestamp(),
+        status: "sent_failed",
+        errorMessage: (error instanceof Error) ? error.message : "Unknown error"
+      });
+    } catch (logError) {
+      console.error("Lineメッセージログ記録失敗 (エラー発生時):", logError);
+    }
+    return "LINEメッセージの送信に失敗しました。";
   }
-  
-  const shift = shiftSampleData[shiftIndex];
-  
-  // 既に同じメンバーがいないかチェック（LINE IDベース）
-  const existingMember = shift.members.find(m => m.userId === userId);
-  if (existingMember) {
-    return `${memberName}さんは既に${date}のシフトに入っています（${existingMember.startTime}-${existingMember.endTime}）。`;
-  }
-  
-  shift.members.push({ userId, name: memberName, startTime, endTime });
-  return `${date}に${memberName}さんのシフト（${startTime}-${endTime}）を追加しました。現在${shift.members.length}名体制です。`;
 }
 
-// ヘルパー関数：メンバー削除
-function removeMemberFromShift(
-  shiftIndex: number, 
-  date: string, 
-  userId: string, 
-  memberName: string
-): string {
-  console.log(`[removeMemberFromShift] ${memberName}さんを${date}から削除`);
+/**
+ * Firestoreに保存された最も直近のLineメッセージログを取得する。
+ * @returns 最も新しいメッセージの文字列、または見つからない場合はnull
+ */
+export async function getLatestShiftCallOutMessage(args: any = {}): Promise<string | null> {
+  console.log('[getLatestShiftCallOutMessage] 受信引数:', args);
   
-  if (shiftIndex === -1) {
-    return `${date}のシフトデータが存在しないため、削除できません。`;
+  // パラメータの存在チェック
+  if (!args || typeof args !== 'object') {
+    return 'エラー: 不正なパラメータ形式です。';
   }
-  
-  const shift = shiftSampleData[shiftIndex];
-  const memberIndex = shift.members.findIndex(m => m.userId === userId);
-  
-  if (memberIndex === -1) {
-    return `${date}のシフトに${memberName}さんは入っていません。`;
+  const db = getFirestore();
+  try {
+    const q = query(
+      collection(db, "line_call_out_message_logs"),
+      orderBy("timestamp", "desc"),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const latestMessageDoc = querySnapshot.docs[0];
+      return latestMessageDoc.data().message as string;
+    } else {
+      console.log("Lineメッセージログが見つかりませんでした。");
+      return "Lineメッセージログが見つかりませんでした。";
+    }
+  } catch (error) {
+    console.error("最新のLineメッセージログ取得失敗:", error);
+    return "最新のLineメッセージログ取得失敗";
   }
-  
-  const removedMember = shift.members[memberIndex];
-  shift.members.splice(memberIndex, 1);
-  
-  const remainingCount = shift.members.length;
-  const remainingText = remainingCount > 0 ? `残り${remainingCount}名体制になります。` : '空きシフトになります。';
-  
-  return `${date}の${memberName}さんのシフト（${removedMember.startTime}-${removedMember.endTime}）を削除しました。${remainingText}`;
 }

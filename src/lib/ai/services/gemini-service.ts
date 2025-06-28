@@ -7,7 +7,7 @@ import {
   addFunctionResponsesToHistory, 
   ChatHistoryEntry,
   GeminiHistoryPart // GeminiHistoryPartもインポート
-} from '../../firebase/firebaseChatHistory'; 
+} from '../../firebase/firebaseAiEngine'; 
 import { db } from '../../firebase/firebase'; // Firestoreインスタンスを初期化するためにインポート（直接使用はしないが重要）
 
 export class GeminiService {
@@ -17,7 +17,7 @@ export class GeminiService {
   private toolDeclarations: any[]; // ツール宣言を保持するプロパティを追加
   private maxFunctionCalls: number = 10; // 最大連続実行回数（無限ループ防止）
 
-  constructor(toolDeclarations: any[], availableFunctions: { [key: string]: Function }) {
+  constructor(toolDeclarations: any[], availableFunctions: { [key: string]: Function }, systemInstruction: string) {
     this.vertexAI = new VertexAI({
       project: process.env.VERTEX_AI_PROJECT_ID!,
       location: process.env.VERTEX_AI_LOCATION!
@@ -28,6 +28,7 @@ export class GeminiService {
       generationConfig: {
         temperature: 0.2, // 応答のランダム性を制御 (0.0 - 1.0)。低めに設定し、一貫性を重視
       },
+      systemInstruction: systemInstruction
     });
 
     this.tools = availableFunctions;
@@ -95,10 +96,6 @@ export class GeminiService {
       // 最終的なテキスト応答を抽出
       const aiResponseText = this.extractTextResponse(result.response);
       console.log(`[システム] 最終的なAI応答: ${aiResponseText}`);
-
-      // 履歴保存はループ内で完結するため、ここでの追加保存は不要
-      // await addUserMessageToHistory(userId, userMessage); // 既に保存済み
-      // await addAiResponseToHistory(userId, aiResponseText); // 既に保存済み
 
       return aiResponseText;
 
@@ -231,12 +228,6 @@ export class GeminiService {
     return "Geminiからの有効な応答が得られませんでした。";
   }
 
-  // GeminiServiceではチャット履歴を保持しないため、clearHistoryは不要
-  // ただし、ShiftManagementAI側からclearUserChatHistoryを呼び出すことになる
-  // async clearHistory() { ... }
-
-  // デバッグ用関数も不要になる
-  // async getChatHistoryForDebug(): Promise<any[]> { ... }
 
   /**
    * 最大function call回数を設定 (開発・テスト用)
