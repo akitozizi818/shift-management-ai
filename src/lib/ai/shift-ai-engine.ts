@@ -1,21 +1,34 @@
 // src/lib/ai/shift-ai-engine.ts
 import { GeminiService } from './services/gemini-service';
-import { getCurrentDate, getShiftData, getRuleData, editShiftData, getMemberName } from './shift-utils';
-import { clearUserChatHistory } from '../firebase/firebaseChatHistory'; // 会話履歴クリアのため追加
 import { rootCertificates } from 'tls';
+import { getCurrentDate, getShiftData, getRuleData, editShiftData,shiftCallOut,getLatestShiftCallOutMessage } from './shift-utils';
+import { clearUserChatHistory } from '../firebase/firebaseAiEngine'; 
+import { getSystemPrompt } from '../firebase/firebaseAiEngine'; 
 
 export class ShiftManagementAI {
-  private geminiService: GeminiService;
+  private geminiService: GeminiService | undefined;
   // メッセージカウントは、システムプロンプトの頻度調整用でしたが、
   // 履歴がFirestoreに永続化されるため、このインスタンス単位でのカウントは限定的な意味しか持ちません。
   // 必要であれば、ユーザーごとのメッセージカウントもFirestoreで管理できます。
   private messageCount: number = 0; 
-  // システムプロンプトはFirestoreに履歴として保存されるか、GeminiのsystemInstructionとして設定されるため、
-  // このインスタンスでの定期的な再送信は不要になります。
-  // private readonly SYSTEM_PROMPT_INTERVAL: number = 3; 
+
 
   constructor() {
-    // ツール定義
+  }
+
+  // ★初期化メソッドを追加
+  async init() {
+    const systemPromptContent = await getSystemPrompt('shift_management_ai'); // Firestoreからプロンプトを取得
+    if (!systemPromptContent) {
+      // プロンプトが取得できなかった場合のフォールバック（例: デフォルトプロンプトを使う、エラーをスローするなど）
+      console.error("システムプロンプトのロードに失敗しました。デフォルトプロンプトを使用します。");
+      // ここでデフォルトのプロンプトを設定するか、エラーをthrowする
+      // 例えば: systemPromptContent = "あなたはシフト管理のAIアシスタントです...";
+      throw new Error("システムプロンプトをロードできませんでした。");
+    }else{
+      console.log('systemPrompt:',systemPromptContent)
+    }
+
     const toolDeclarations = [
       {
         function_declarations: [
@@ -81,6 +94,29 @@ export class ShiftManagementAI {
               },
               required: ["date", "action", "userId","startTime","endTime"]
             }
+          },
+          {
+            name: "shiftCallOut",
+            description: "Lineグループにメッセージを送信する。主にシフトの募集や緊急連絡に使用。AIは、この関数を呼び出す際に、送信するメッセージの具体的な内容を'getLatestShiftCallOutMessage'で取得した情報と'editShiftData'の編集内容をもとに生成する必要がある。",
+            parameters: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  description: "Lineに送信するメッセージの内容。例: 「〇月〇日の〇時から〇時まで、シフトに入れる方を募集しています！ご協力お願いします！」"
+                }
+              },
+              required: ["message"]
+            }
+          },
+          {
+            name: "getLatestShiftCallOutMessage",
+            description: "過去にLINEグループに送信されたシフト募集や緊急連絡の**最新メッセージの内容を取得**します。この関数は特に、**シフトが更新された後、新たな募集メッセージを作成する際に、これまでの募集内容を参考にする目的**で呼び出されます。",
+            parameters: {
+              type: "object",
+              properties: {},
+              required: []
+            }
           }
         ]
       }
@@ -91,10 +127,17 @@ export class ShiftManagementAI {
       getCurrentDate,
       getShiftData,
       getRuleData,
-      editShiftData
+      editShiftData,
+      shiftCallOut,
+      getLatestShiftCallOutMessage
     };
 
-    this.geminiService = new GeminiService(toolDeclarations, availableFunctions);
+    // GeminiServiceの初期化時にシステムプロンプトを渡す
+    this.geminiService = new GeminiService(
+      toolDeclarations,
+      availableFunctions,
+      systemPromptContent // ★GeminiServiceにシステムプロンプトを渡す
+    );
   }
 
   /**
@@ -112,7 +155,11 @@ export class ShiftManagementAI {
     const prompt = this.createUserMessage(memberName, memberMessage, userId);
 
     console.log(`[システム] ${memberName}さん（${userId}）からメッセージ ${this.messageCount}回目`);
-
+    // ★ ここで geminiService が初期化されていることを確認する
+    if (!this.geminiService) {
+      console.error("AIエンジンが初期化されていません。handleMemberMessage を呼び出す前に init() を呼び出してください。");
+      return 'システムがまだ準備できていません。しばらくしてから再度お試しください。';
+    }
     try {
       // GeminiServiceにuserIdとユーザーメッセージを渡す
       const response = await this.geminiService.sendMessage(userId, prompt);

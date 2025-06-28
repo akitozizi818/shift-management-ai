@@ -20,10 +20,40 @@ import type {
     MessageEvent,
     TextMessage,
 } from '@line/bot-sdk'
-import { replyLineMessage } from '@/lib/line/client'
+import { replyLineMessage } from '@/lib/line/client';
 import { LineMessageService } from '@/lib/services/line-message-service';
+import { ShiftManagementAI } from '@/lib/ai/shift-ai-engine'; // ShiftManagementAIをインポート
 
 
+// 初期化済みのAIクライアントインスタンスを保持する変数
+let initializedAiClient: ShiftManagementAI | null = null;
+// 初期化が進行中であることを示すプロミスを保持する変数
+let initializationPromise: Promise<void> | null = null;
+
+async function getInitializedAiClient(): Promise<ShiftManagementAI> {
+  // 既に初期化済みのインスタンスがあればそれを返す（ウォームスタート）
+  if (initializedAiClient) {
+    console.log("AIクライアントは既に初期化済みです。(ウォームスタート)");
+    return initializedAiClient;
+  }
+
+  // 初期化がまだ開始されていない場合のみ、初期化処理を実行するプロミスを作成
+  if (!initializationPromise) {
+    console.log("AIクライアントの初期化を開始します。(コールドスタート)");
+    initializationPromise = (async () => {
+      const ai = new ShiftManagementAI();
+      await ai.init(); // ここでFirestoreからシステムプロンプトをロード
+      initializedAiClient = ai; // 初期化完了後にインスタンスをセット
+      console.log("ShiftManagementAI instance initialized (cold start completed).");
+    })();
+  }
+
+  // 初期化プロミスが完了するのを待つ
+  await initializationPromise;
+
+  // 初期化が成功していれば必ず非null
+  return initializedAiClient!; 
+}
 /**
  * LINE からの webhook リクエストを処理するメイン関数
  */
@@ -80,20 +110,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid webhook structure' }, { status: 400 });
     }
 
-    // userid確認用のログ
+    // useridとgroupid確認用のログ
     for (const event of webhookBody.events) {
-      if (event.type === 'message' && event.source.type === 'user') {
+      if (event.source.type === 'user') {
         const userId = event.source.userId;
-        console.log('User sent a message! User ID:', userId);
-      } else if (event.source.type === 'user') {
-        const userId = event.source.userId;
-        console.log('Other event from user! User ID:', userId, 'Event type:', event.type);
+        console.log('User sent a message! User ID:', userId, 'Event type:', event.type);
+      } else if (event.source.type === 'group') {
+        // グループIDをログに出力
+        const groupId = event.source.groupId;
+        console.log('Event from group! Group ID:', groupId, 'Event type:', event.type);
       }
     }
+
+    // 最初にAIクライアントが初期化されるのを待つ
+    const aiClient = await getInitializedAiClient();
     
     // メッセージ処理サービスに委譲
     try {
-      const messageService = new LineMessageService();
+      const messageService = new LineMessageService(aiClient);
       await messageService.handleWebhookEvents(webhookBody.events);
     } catch (serviceError) {
       console.error('メッセージサービスエラー:', serviceError);
@@ -136,54 +170,3 @@ const verifySignature = (body: string, signature: string | null): boolean => {
     .digest('base64');
   return signature === generatedSignature;
 };
-
-/**
- * フォローイベント（友達追加）を主に処理する関数
- * @param event - FollowEventObject
- */
-async function handleFollowEvent(event: FollowEvent) {
-  console.log('Follow event received:', {
-    userId: event.source.userId,
-    replyToken: event.replyToken,
-    timestamp: event.timestamp
-  });
-  // 例: フォローありがとうメッセージを返す（必要ならコメントアウトを解除）
-  // await replyLineMessage(event.replyToken, [{ type: 'text', text: '友達追加ありがとうございます！' }]);
-  return;
-}
-
-// AI処理システムへの転送（現時点ではまだapi/aiがないので実装できないため、ターミナルに出力してテストする）
-async function forwardToAISystem(messageEvent: MessageEvent) {
-  // 別のAPIエンドポイント（/api/ai など）にPOSTして
-  // AI処理に委ねる
-
-    if (messageEvent.message.type !== 'text') {
-        return;
-    }
-
-    // サーバーサイドで fetch を使う際は, 完全な URL を指定する.
-    const targetUrl = 'http://localhost:3000/api/ai/process-message';
-    console.log(`Forwarding message to: ${targetUrl}`);
-    try {
-        const response = await fetch(targetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: messageEvent.source.userId,
-                message: messageEvent.message.text,
-                replyToken: messageEvent.replyToken,
-                timestamp: messageEvent.timestamp
-            })
-        });
-
-        if (!response.ok) {
-            // fetchは成功したが, レスポンスがエラーだった場合
-            console.error(`Failed to forward to AI system. Status: ${response.status}`);
-            const errorBody = await response.text();
-            console.error(`Error body from AI system: ${errorBody}`);
-        }
-    } catch (error) {
-        // fetch自体が失敗した場合（ネットワークエラーなど）
-        console.log('Error forwarding to AI system:', error);
-    }
-  };

@@ -1,7 +1,7 @@
-// src/lib/firebase/firebaseChatHistory.ts (修正版 - addAiResponseToHistoryの変更)
+// src/lib/firebase/firebaseAiEngine.ts
 
 import { db } from './firebase'; 
-import { collection, query, orderBy, limit, addDoc, getDocs, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, getDocs, serverTimestamp, writeBatch, doc, getDoc } from 'firebase/firestore'; // TimestampとFieldValueを追加インポート
 
 // Gemini APIの履歴形式に合わせた型定義
 export interface GeminiHistoryPart {
@@ -102,4 +102,23 @@ export async function clearUserChatHistory(userId: string): Promise<void> {
   });
   await batch.commit();
   console.log(`User ${userId}'s chat history cleared from Firestore.`);
+}
+
+export async function getSystemPrompt(promptKey: string): Promise<string | null> {
+  
+  const docRef = doc(db, 'ai_settings', 'system_prompts'); // コレクションとドキュメント名は適宜変更
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data && data[promptKey]) {
+        return data[promptKey] as string;
+      }
+    }
+    console.warn(`Firestoreにプロンプトキー '${promptKey}' が見つかりませんでした。`);
+    return null;
+  } catch (error) {
+    console.error('システムプロンプトの取得中にエラーが発生しました:', error);
+    return null;
+  }
 }

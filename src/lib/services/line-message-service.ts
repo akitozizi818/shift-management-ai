@@ -7,12 +7,9 @@ import { replyLineMessage } from '@/lib/line/client';
 export class LineMessageService {
   private aiClient: ShiftManagementAI;
   
-  constructor() {
-    // アプリケーションが起動する際に一度だけインスタンスが生成されることを想定
-    // サーバーレス環境の場合、リクエストごとにこのコンストラクタが呼ばれ、
-    // その結果として新しい ShiftManagementAI インスタンスが作られる。
-    // ただし、ShiftManagementAI 内で会話履歴がDBからロードされるため問題ない。
-    this.aiClient = new ShiftManagementAI();
+  constructor(aiClient: ShiftManagementAI) {
+    // this.aiClient = new ShiftManagementAI();
+    this.aiClient = aiClient;
   }
   
   /**
