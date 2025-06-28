@@ -48,7 +48,7 @@ export class LineMessageService {
       console.log(`Non-text message ignored: ${event.message.type}`);
       return;
     }
-    
+    const userId = event.source?.userId ?? 'unknown_user';
     // LINEの replyToken は一度しか使えないため、最初に取得
     const replyToken = event.replyToken;
 
@@ -60,7 +60,7 @@ export class LineMessageService {
       });
       
       // 1. ユーザー情報取得
-      const user = await fetchUserByLineUserId(event.source.userId);
+      const user = await fetchUserByLineUserId(userId);
       
       if (!user) {
         await replyLineMessage(replyToken, 'ユーザー情報が見つかりません。管理者にお問い合わせください。');
