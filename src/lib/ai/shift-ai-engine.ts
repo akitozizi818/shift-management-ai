@@ -2,6 +2,7 @@
 import { GeminiService } from './services/gemini-service';
 import { getCurrentDate, getShiftData, getRuleData, editShiftData, getMemberName } from './shift-utils';
 import { clearUserChatHistory } from '../firebase/firebaseChatHistory'; // 会話履歴クリアのため追加
+import { rootCertificates } from 'tls';
 
 export class ShiftManagementAI {
   private geminiService: GeminiService;

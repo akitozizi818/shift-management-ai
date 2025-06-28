@@ -1,15 +1,25 @@
 // src/lib/ai/shift-utils.ts
 import { shiftSampleData, ruleSampleData, memberMasterData } from './sample-data';
+import { fetchUserByLineUserId } from '../firebase/firebaseUsers';
+import { fetchPublished, updateSchedule } from '../firebase/firebaseSchedule';
+import { fetchLatestRule } from '../firebase/firebaseRules';
 
 // メンバー名を取得する関数
-export function getMemberName(userId: string): string {
-  const member = memberMasterData.find(m => m.userId === userId);
-  return member ? member.name : '不明なメンバー';
+export async function getMemberName(userId: string): Promise<string> {
+  const member = await fetchUserByLineUserId(userId);
+  return member ? member.data.name : '不明なメンバー';
+}
+
+// メンバーの役割を取得する関数
+export async function getMemberRole(userId: string): Promise<string> {
+  const member = await fetchUserByLineUserId(userId);
+  return member ? member.data.role : '不明な役割';
 }
 
 // LINE IDが有効かチェックする関数
-export function isValidMember(userId: string): boolean {
-  return memberMasterData.some(m => m.userId === userId);
+export async function isValidMember(userId: string): Promise<boolean> {
+  const member = await fetchUserByLineUserId(userId);
+  return !!member; // メンバーが存在すればtrue、存在しなければfalse
 }
 
 // 現在の日本時間を取得（Function calling用）
@@ -29,7 +39,7 @@ export function getCurrentDate(args: any = {}): string {
 }
 
 // シフトデータを取得（Function calling用）
-export function getShiftData(args: any): string {
+export async function getShiftData(args: any): Promise<string> {
   console.log('[getShiftData] 受信引数:', args);
   
   // パラメータの存在チェック
@@ -44,43 +54,56 @@ export function getShiftData(args: any): string {
   if (!date) {
     return 'エラー: 日付パラメータが不足しています。';
   }
+
+  const schedule = await fetchPublished();
+  if (!schedule) {
+    return 'エラー: 公開されたスケジュールが存在しません。';
+  }
   
-  const shift = shiftSampleData.find(s => s.date === date);
+  const shift = schedule.shifts?.[date];
   
   if (!shift) {
     return `${date}のシフトデータは見つかりませんでした。`;
   }
   
-  if (shift.members.length === 0) {
+  if (shift.memberAssignments.length === 0) {
     return `${date}は現在誰もシフトに入っていません（人員不足状態）。`;
   }
   
-  const memberList = shift.members.map(m => 
-    `${m.name}さん: ${m.startTime}-${m.endTime}`
+  const memberList = shift.memberAssignments.map(m => 
+    `${getMemberName(m.userId)}さん: ${m.startTime}-${m.endTime}`
   ).join(', ');
   
-  const result = `${date}のシフト状況: ${memberList} (合計${shift.members.length}名)`;
+  const result = `${date}のシフト状況: ${memberList} (合計${shift.memberAssignments.length}名)`;
   console.log('[getShiftData] 結果:', result);
   
   return result;
 }
 
 // ルールデータを取得（Function calling用）
-export function getRuleData(args: any = {}): string {
+export async function getRuleData(args: any = {}): Promise<string> {
   console.log('[getRuleData] 受信引数:', args);
   
-  const rules = ruleSampleData.map(rule => 
-    `- ${rule.name}: ${rule.description}`
-  ).join('\n');
+  const rules = await fetchLatestRule();
+
+  if (!rules) {
+    return 'エラー: シフト管理ルールが見つかりません。';
+  }
+
+  // ルールのフォーマット
+  let rulesText = '';
+  for (const [key, value] of Object.entries(rules)) {
+    rulesText += `- ${key}: ${value}\n`;
+  }
   
-  const result = `シフト管理ルール:\n${rules}`;
+  const result = `シフト管理ルール:\n${rulesText}`;
   console.log('[getRuleData] 結果取得完了');
   
   return result;
 }
 
 // シフトデータを編集（Function calling用）
-export function editShiftData(args: any): string {
+export async function editShiftData(args: any): Promise<string> {
   console.log('[editShiftData] 受信引数:', args);
   
   // パラメータの存在チェック
@@ -118,21 +141,61 @@ export function editShiftData(args: any): string {
     return `無効なメンバーIDです: ${userId}`;
   }
 
-  const memberName = getMemberName(userId);
-  const shiftIndex = shiftSampleData.findIndex(s => s.date === date);
+  const memberName = await getMemberName(userId);
+  const memberRole = await getMemberRole(userId);
+  const schedule = await fetchPublished();
+  if (!schedule) {
+    return 'エラー: 公開されたスケジュールが存在しません。';
+  }
+  const shifts = { ...schedule.shifts };
+  if (!shifts[date]) {
+    shifts[date] = { memberAssignments: [] };
+  }
+  const existingIndex = shifts[date].memberAssignments.findIndex(m => m.userId === userId);
   
   console.log(`[editShiftData] 処理開始: ${memberName}さんの${action}処理 対象日: ${date}`);
   
   let result: string;
   
   if (action === 'add') {
-    result = addMemberToShift(shiftIndex, date, userId, memberName, startTime, endTime);
+    if (existingIndex !== -1) {
+      // 既に同じメンバーがいる場合はエラー
+      const existingMember = shifts[date].memberAssignments[existingIndex];
+      return `${memberName}さんは既に${date}のシフトに入っています（${existingMember.startTime}-${existingMember.endTime}）。`;
+    }
+    
+    // 新規追加処理
+    if (!startTime || !endTime) {
+      return 'シフト追加には開始時間と終了時間が必要です。';
+    }
+    
+    shifts[date].memberAssignments.push({ userId, startTime, endTime, role: memberRole });
+    const newShiftCount = shifts[date].memberAssignments.length;
+    result = `${date}に${memberName}さんのシフト（${startTime}-${endTime}）を追加しました。現在${newShiftCount}名体制です。`;
   } else if (action === 'remove') {
-    result = removeMemberFromShift(shiftIndex, date, userId, memberName);
+    if (existingIndex === -1) {
+      // 既に同じメンバーがいない場合はエラー
+      return `${memberName}さんは${date}のシフトに入っていません。`;
+    }
+    
+    // 削除処理
+    const removedMember = shifts[date].memberAssignments[existingIndex];
+    shifts[date].memberAssignments.splice(existingIndex, 1);
+    
+    const remainingCount = shifts[date].memberAssignments.length;
+    const remainingText = remainingCount > 0 ? `残り${remainingCount}名体制になります。` : '空きシフトになります。';
+    
+    result = `${date}の${memberName}さんのシフト（${removedMember.startTime}-${removedMember.endTime}）を削除しました。${remainingText}`;
+    
+    // シフトが空になった場合は日付ごと削除
+    if (remainingCount === 0) {
+      delete shifts[date];
+    }
   } else {
     result = `無効な操作です: ${action}`;
   }
-  
+  await updateSchedule(schedule.scheduleId, shifts);
+
   console.log('[editShiftData] 処理結果:', result);
   return result;
 }
