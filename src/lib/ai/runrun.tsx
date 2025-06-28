@@ -1,6 +1,6 @@
 import { addSchedule } from "../firebase/firebaseSchedule";
 
-export  async function RunRun({ year, month, ruleName = "rule-001" }: { year: number; month: number; ruleName?: string }) {
+export  async function RunRun({ year, month, ruleName }: { year: number; month: number; ruleName?: string }) {
     console.log("🔄 シフト案を生成中...");
     //ローディング機能の追加
     try {   
