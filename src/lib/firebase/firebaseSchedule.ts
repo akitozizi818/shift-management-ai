@@ -41,7 +41,7 @@ export async function fetchArchived(): Promise<Schedule | null> {
 
 /* 現在 published のスケジュールを 1 件返す（なければ null） */
 export async function fetchPublished(): Promise<Schedule | null> {
-    const q = query(col(), where("status", "==", "published "), limit(1));
+    const q = query(col(), where("status", "==", "published"), limit(1));
     const snap = await getDocs(q);
     return snap.docs.length ? (snap.docs[0].data() as Schedule) : null;
 }
