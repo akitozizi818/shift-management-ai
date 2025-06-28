@@ -22,22 +22,47 @@ export interface ChatHistoryEntry {
   timestamp: any; 
 }
 
-/**
- * 指定したユーザーの会話履歴を取得する
- * @param userId - ユーザーID
- * @param limitCount - 取得する履歴の最大数 (Geminiのコンテキストウィンドウに合わせて調整)
- * @returns 会話履歴の配列
- */
-export async function getChatHistory(userId: string, limitCount: number = 20): Promise<ChatHistoryEntry[]> {
+export async function getChatHistory(
+  userId: string,
+  userTurnLimit: number = 5, // userロールの会話ターン数で制限
+  totalFetchLimit: number = 50 // Firestoreから一度に取得する最大ドキュメント数（バッファ）
+): Promise<ChatHistoryEntry[]> {
   const chatHistoryRef = collection(db, `users/${userId}/chatHistory`);
-  const q = query(chatHistoryRef, orderBy('timestamp', 'asc'), limit(limitCount));
+
+  // (1) Firestoreから最新のデータから多めに取得 (新しいもの → 古いもの)
+  // userTurnLimitに到達するために、十分な量のデータをフェッチする
+  const q = query(chatHistoryRef, orderBy('timestamp', 'desc'), limit(totalFetchLimit));
   const querySnapshot = await getDocs(q);
 
-  const history: ChatHistoryEntry[] = [];
+  const historyToProcess: ChatHistoryEntry[] = [];
   querySnapshot.forEach(doc => {
-    history.push(doc.data() as ChatHistoryEntry);
+    historyToProcess.push(doc.data() as ChatHistoryEntry);
   });
-  return history;
+
+  const filteredHistory: ChatHistoryEntry[] = [];
+  let currentUserTurnCount = 0;
+
+  // (2) 最新のデータから遡り、指定されたuserTurnLimitに達するまで履歴を収集
+  // これにより、userターンが途切れることなく、関連するmodel/functionターンも含まれる
+  for (let i = 0; i < historyToProcess.length; i++) {
+    const entry = historyToProcess[i];
+    
+    // filteredHistoryの先頭に追加することで、一時的に古いものから新しいものへ並ぶ
+    filteredHistory.unshift(entry); 
+
+    if (entry.role === 'user') {
+      currentUserTurnCount++;
+      if (currentUserTurnCount >= userTurnLimit) {
+        break; // 指定したユーザーターン数に達したら停止
+      }
+    }
+  }
+
+  // (3) 収集した履歴を最も古いものから並べ替える (古いもの → 新しいもの)
+  // AIモデルが会話履歴を古い順に期待するため、ここで並べ替え直す
+  filteredHistory.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+  
+  return filteredHistory;
 }
 
 /**
