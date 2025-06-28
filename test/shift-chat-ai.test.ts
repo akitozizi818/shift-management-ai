@@ -35,7 +35,7 @@ async function example() {
   const response3 = await shiftAI.handleMemberMessage(
     '佐藤',
     '6月26日の9時から17時で代替出勤可能です。',
-    'U002'
+    'U002',
   );
   console.log('AI応答:', response3);
   console.log('\n' + '='.repeat(50) + '\n');
@@ -118,7 +118,7 @@ async function testCustomInterval() {
   console.log('=== カスタム間隔テスト（2回に1回） ===\n');
   
   // 間隔を2回に変更
-  shiftAI.setSystemPromptInterval(2);
+  // shiftAI.setSystemPromptInterval(2);
   
   const conversations = [
     { member: '田中', userId: 'U001', message: '代替出勤希望です' },
