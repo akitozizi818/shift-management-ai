@@ -65,7 +65,7 @@ export async function getShiftData(args: any): Promise<string> {
   const shift = schedule.shifts?.[date];
   
   if (!shift) {
-    return `${date}のシフトデータは見つかりませんでした。`;
+    return `${date}現在誰もシフトに入っていません（人員不足状態）。`;
   }
   
   if (shift.memberAssignments.length === 0) {

@@ -211,7 +211,8 @@ export class GeminiService {
     const parts = this.getResponseParts(response);
     
     const textParts = parts
-      .filter(part => part?.text)
+      // partが存在し、かつ part.text が文字列型であることを保証する型ガード
+      .filter((part): part is { text: string } => part != null && typeof part.text === 'string')
       .map(part => part.text.trim())
       .filter(text => text.length > 0); 
 
