@@ -5,7 +5,7 @@ export interface memberAssignment {
   userId: string;
   startTime: string;
   endTime: string;
-  role: string;
+  role?: string;
 }
 
 export interface Schedule {
@@ -51,30 +51,6 @@ export interface ShiftRequest {
 // types/shift.ts（など共通の型宣言ファイル）
 // ---------------------------------------------
 
-/** 個々の希望提出 (=1レコード) */
-export interface ShiftRequest {
-  requestId: string;                    // UUID
-  userId: string;                       // 希望提出者
-  month: string;                        // "YYYY-MM"
-  preferredDates: number[];             // 希望勤務日 (UNIX time ms)
-  unavailableDates: number[];           // 勤務不可日   (UNIX time ms)
-  preferredShifts: {                    // 日付ごとの希望時間
-    [date: string]: {
-      startTime: string;                // "HH:mm"
-      endTime: string;                  // "HH:mm"
-    };
-  };
-  status: "pending" | "processed" | "approved";
-  submittedAt: number;                  // UNIX time ms
-  processedAt?: number;
-  processedBy?: string;                 // 処理担当者ID
-}
-
-/**
- * RequestMap
- *  └─ key   : date (YYYY-MM-DD)  ※日単位でまとめる
- *  └─ value : その日に提出された希望配列
- */
 export type RequestMap = Record<string, ShiftRequest[]>;
 
 
@@ -90,4 +66,22 @@ export interface User{
     department?: string;   // 所属部署
     isActive: boolean;     // アクティブ状態
   };
+}
+
+
+export interface Rule {
+  ruleId: string;                          // UUID → id フィールドに対応
+  name: string;                            // "基本勤務ルール_ver1"
+  description?: string;                    // 説明文（画像の description）
+  minStaffCount: number;                   // 最小スタッフ数 → minStaff
+  maxStaffCount?: number;                  // 最大スタッフ数 → maxStaff
+  workingHours: {                          // 営業時間
+    start: string;                         // "13:00"
+    end: string;                           // "22:00"
+  };
+  isAllDay: boolean;                       // isAllDay: false
+  isActive: boolean;                       // Firestore側にない → default true などでも可
+  priority: number;                        // 優先度 → Firestore側にない → default 0 などでも可
+  createdAt: number;                       // UNIXタイムスタンプに変換すべき（今は日付文字列）
+  updatedAt?: number;                      // 任意（まだない）
 }

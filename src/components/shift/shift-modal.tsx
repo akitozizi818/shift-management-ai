@@ -1,29 +1,28 @@
-// --- code trimmed for brevity ---
-// Assuming ShiftCalendar and other components are already here.
-// Below we inject the stylish ShiftModal component overwriting the previous one.
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
 import { useAuth } from "@/app/context/AuthContext";
-import { saveShiftRequest } from "@/logic/saveShiftRequest";
-import { fetchPublished } from "@/logic/firebaseSchedule";
-import { fetchActiveUsers, UserDoc } from "@/logic/firebaseUsers";
+import { saveShiftRequest } from "@/lib/saveShiftRequest";
+import { fetchPublished } from "@/lib/firebase/firebaseSchedule";
+import { fetchActiveUsers, UserDoc } from "@/lib/firebase/firebaseUsers";
 
 import type { memberAssignment, Role, ShiftRequest } from "@/types/shift";
+import { usePathname } from "next/navigation";
+type SetDayAssignments =
+  | React.Dispatch<React.SetStateAction<Record<string, memberAssignment[]>>>
+  | ((map: Record<string, memberAssignment[]>) => void);
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date;
   dayAssignments: Record<string, memberAssignment[]>;
-  setDayAssignments: (m: Record<string, memberAssignment[]>) => void;
+  setDayAssignments: SetDayAssignments;
 }
-
 /* ---------- helpers ---------- */
 const pad = (n: number) => n.toString().padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -46,6 +45,8 @@ export default function ShiftModal({
   const { user, id } = useAuth();
   const currentUser = user && id ? user[id] : undefined;
   const isAdmin = currentUser?.role === "admin";
+  const path = usePathname();
+
 
   useEffect(() => {
     if (isAdmin) {
@@ -152,7 +153,7 @@ export default function ShiftModal({
 
     try {
       /* ===== 2) 楽観的 UI 更新 ===== */
-      setDayAssignments((prev: Record<string, memberAssignment[]>) => {
+      setDayAssignments((prev) => {
         const next: Record<string, memberAssignment[]> = { ...prev };
 
         if (category === "preferred") {
@@ -273,12 +274,14 @@ export default function ShiftModal({
                           className="w-full bg-white/10 text-white rounded px-3 py-2 focus:bg-white focus:text-black focus:outline-none"
                         >
                           {!isAdmin && <option value={id ?? ""}>{currentUser?.name}</option>}
-                          {isAdmin &&
+                          {isAdmin && !path.includes("/member/shiftrequests") &&
                             Object.entries(users).map(([uid, u]) => (
                               <option key={uid} value={uid}>
                                 {u.name}（{u.role === "admin" ? "店長" : "スタッフ"}）
                               </option>
                             ))}
+                          {path.includes("/member/shiftrequests") && <option value={id ?? ""}>{currentUser?.name}</option>}
+
                         </select>
                       </div>
 
@@ -307,7 +310,8 @@ export default function ShiftModal({
                   </div>
                 ))}
 
-                {isAdmin && (
+
+                {isAdmin && !path.includes("/member/shiftrequests")&& (
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}

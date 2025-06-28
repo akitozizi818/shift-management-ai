@@ -1,4 +1,4 @@
-import { db } from "@/logic/firebase";
+import { db } from "@/lib/firebase/firebase";
 import {
   doc,
   setDoc,
@@ -37,7 +37,7 @@ export const saveShiftRequest = async (request: ShiftRequest) => {
     /* ---------- ① 追加・更新 ---------- */
     let preferred = uniq([...existing.preferredDates]);
     let unavailable = uniq([...existing.unavailableDates]);
-    let nextShifts = { ...existing.preferredShifts };
+    const nextShifts = { ...existing.preferredShifts };
 
     // ―― 希望　――
     if (request.preferredDates.length) {

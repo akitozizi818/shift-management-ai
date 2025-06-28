@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
-import { logout } from "@/logic/logOut"
+import { logout } from "@/lib/firebase/logOut"
 const titleMap: Record<string, string> = {
   "/admin": "管理者ダッシュボード",
   "/admin/shiftcreate": "シフト作成",

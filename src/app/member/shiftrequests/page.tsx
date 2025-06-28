@@ -1,5 +1,5 @@
 import ShiftManagementPage from "@/components/shift/shift-mangement"
-// import { loadRequestMap } from "@/logic/scheduleRequestStorage";
+// import { loadRequestMap } from "@/lib/scheduleRequestStorage";
 
 export default function MemberRequestPage() {
   const request = true; // リクエストモードを有効にする
