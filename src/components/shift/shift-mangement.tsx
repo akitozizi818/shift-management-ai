@@ -55,7 +55,6 @@ export default function ShiftManagementPage({
   const [month, setMonth] = useState(selectedDate.getMonth() + 1);
   // const [rule, setRule] = useState<RuleName>("random-basic");
   const ymKey = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
-  const rulelist = ["AI自動編成", "random-basic"];
   const { user, id } = useAuth();
   const currentUser = user && id ? user[id] : undefined;
 
@@ -119,7 +118,9 @@ export default function ShiftManagementPage({
         });
 
         setDayAssignments(map);
-        console.log("Shift requests loaded:", map);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Shift requests loaded:", map);
+        }
       };
 
 
@@ -175,7 +176,7 @@ export default function ShiftManagementPage({
       loadMyRequests();
     }
 
-  }, [request, currentUser, year, month]);   // 👈 依存リストに追加
+  }, [request, currentUser, year, month, id, path]);   // Add missing dependencies
 
 
   const reloadDrafts = async (y = year, m = month) => {
@@ -203,7 +204,10 @@ useEffect(() => {
     setLoading(true);
     const sc = await RunRun({ year, month, ruleName: rule }); // 追加：RunRun を呼び出す
     setLoading(false);
-    console.log(sc)
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(sc);
+    }
   };
 
   /* ---------- 公開 / 非公開 ---------- */
@@ -240,7 +244,7 @@ useEffect(() => {
   const normalizeKey = (raw: string) => {
     const [y, m, d] = raw.split("-");
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }; 2
+  };
 
   /* シフト → dayAssignments 変換を共通化 */
   const toMap = (
@@ -283,7 +287,7 @@ useEffect(() => {
 
     // ④ どれも無ければ空
     setDayAssignments({});
-  }, [initialDayAssignments, editing, published]);
+  }, [initialDayAssignments, editing, published, request]);
 
 
   /* ---------- 月ごとのリスト表示用 ---------- */

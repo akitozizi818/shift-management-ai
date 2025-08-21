@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import ShiftCalendar from "@/components/shift/shift-calendar";
 import ShiftModal from "@/components/shift/shift-modal";
 import ShiftTable from "@/components/shift/shift-table";
 
-import { fetchAllArchived, fetchArchived, updateSchedule } from "@/lib/firebase/firebaseSchedule";
+import { fetchAllArchived, updateSchedule } from "@/lib/firebase/firebaseSchedule";
 import { type Schedule, type memberAssignment } from "@/types/shift";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePathname } from "next/navigation";
@@ -21,9 +20,9 @@ export default function FinalSchedulePage() {
   const { id } = useAuth();
   const path = usePathname();
 
-  // 年月取得（ShiftTable用）
-  const month = selectedDate?.getMonth() ?? new Date().getMonth();
-  const year = selectedDate?.getFullYear() ?? new Date().getFullYear();
+  // Year and month for ShiftTable (currently unused but may be needed for future features)
+  // const month = selectedDate?.getMonth() ?? new Date().getMonth();
+  // const year = selectedDate?.getFullYear() ?? new Date().getFullYear();
 
   const sortedAssignments = useMemo(() => {
     if (!id) return dayAssignments;
@@ -36,11 +35,11 @@ export default function FinalSchedulePage() {
 
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const archived = await fetchAllArchived();
       setSchedules(archived);
 
-      // 🔽 ここでまとめて日付→memberAssignments のマップを作る
+      // Combine all shifts from archived schedules into a single map
       const map = Object.fromEntries(
         archived.flatMap(s =>
           Object.entries(s.shifts).map(([d, v]) => [d, v.memberAssignments])
@@ -55,6 +54,8 @@ export default function FinalSchedulePage() {
 
   // Assume the first schedule is the one to update, or adjust logic as needed
 
+  // Persist function for updating schedule data
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const persist = (map: Record<string, memberAssignment[]>) => {
     if (!schedules || schedules.length === 0) return;
 
@@ -65,7 +66,7 @@ export default function FinalSchedulePage() {
     // Use the first schedule as the one to update, or adjust logic as needed
     const targetSchedule = schedules[0];
     const updated: Schedule = { ...targetSchedule, shifts: wrapped };
-    updateSchedule(updated.scheduleId, wrapped);
+    void updateSchedule(updated.scheduleId, wrapped);
     setSchedules((prev) =>
       prev.map((s) => (s.scheduleId === updated.scheduleId ? updated : s))
     );

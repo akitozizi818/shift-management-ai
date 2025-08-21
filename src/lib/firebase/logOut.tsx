@@ -6,10 +6,13 @@ import { signOut } from "firebase/auth";
  * 完全ログアウトしてルートへ遷移
  */
 export const logout = async (push: (url: string) => void) => {
+  // url parameter is used in the push function call below
   try {
     await signOut(auth);      // ← Firebase にセッション無効化を要求
   } catch (err) {
-    console.error("❌ signOut 失敗:", err);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("❌ signOut 失敗:", err);
+    }
     // 失敗しても強制的にルートへ戻すならここで何もしない（任意）
   } finally {
     push("/");                // トップページへリダイレクト

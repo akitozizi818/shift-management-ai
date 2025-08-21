@@ -6,7 +6,6 @@ import {
   collection,
   query,
   where,
-  serverTimestamp,
 } from "firebase/firestore";
 
 import type { ShiftRequest } from "@/types/shift";
@@ -39,7 +38,7 @@ export const saveShiftRequest = async (request: ShiftRequest) => {
     let unavailable = uniq([...existing.unavailableDates]);
     const nextShifts = { ...existing.preferredShifts };
 
-    // ―― 希望　――
+    // -- Preferred shifts --
     if (request.preferredDates.length) {
       request.preferredDates.forEach(ts => {
         preferred.push(ts); // 希望日を追加
@@ -50,7 +49,7 @@ export const saveShiftRequest = async (request: ShiftRequest) => {
       );
     }
 
-    // ―― 不可　――
+    // -- Unavailable shifts --
     if (request.unavailableDates.length) {
       request.unavailableDates.forEach(ts => {
         unavailable.push(ts); // 不可日を追加

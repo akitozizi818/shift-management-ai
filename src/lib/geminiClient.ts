@@ -32,8 +32,10 @@ export async function generateShiftWithGemini(
   let parsed: Schedule;
   try {
     parsed = safeJsonParse(raw);
-  } catch (e) {
-    console.error("RAW RESPONSE >>>\n", raw);
+  } catch {
+    if (process.env.NODE_ENV === 'development') {
+      console.error("RAW RESPONSE >>>\n", raw);
+    }
     throw new Error("Gemini 返答を JSON として解析できません");
   }
 

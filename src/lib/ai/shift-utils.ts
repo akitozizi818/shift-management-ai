@@ -1,5 +1,4 @@
 // src/lib/ai/shift-utils.ts
-import { shiftSampleData, ruleSampleData, memberMasterData } from './sample-data';
 import { fetchUserById ,UserDoc} from '../firebase/firebaseUsers';
 import { fetchPublished, updateSchedule } from '../firebase/firebaseSchedule';
 import { fetchLatestRule } from '../firebase/firebaseRules';
@@ -25,8 +24,11 @@ export async function getMemberRole(userId: string): Promise<string> {
 }
 
 // 現在の日本時間を取得（Function calling用）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getCurrentDate(args: any = {}): string {
-  console.log('[getCurrentDate] 受信引数:', args);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getCurrentDate] 受信引数:', args);
+  }
   
   const now = new Date();
   const japanTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
@@ -35,14 +37,19 @@ export function getCurrentDate(args: any = {}): string {
   const timeStr = formatTime(japanTime);
   
   const result = `現在の日本時間: ${dateStr} ${timeStr}`;
-  console.log('[getCurrentDate] 結果:', result);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getCurrentDate] 結果:', result);
+  }
   
   return result;
 }
 
 // シフトデータを取得（Function calling用）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getShiftData(args: any): Promise<string> {
-  console.log('[getShiftData] 受信引数:', args);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getShiftData] 受信引数:', args);
+  }
   
   // パラメータの存在チェック
   if (!args || typeof args !== 'object') {
@@ -50,7 +57,9 @@ export async function getShiftData(args: any): Promise<string> {
   }
   
   const date = args.date;
-  console.log('[getShiftData] 対象日付:', date);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getShiftData] 対象日付:', date);
+  }
   
   // 必須パラメータのチェック
   if (!date) {
@@ -80,14 +89,19 @@ export async function getShiftData(args: any): Promise<string> {
   const memberList = memberNames.join(', ');
   
   const result = `${date}のシフト状況: ${memberList} (合計${shift.memberAssignments.length}名)`;
-  console.log('[getShiftData] 結果:', result);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getShiftData] 結果:', result);
+  }
   
   return result;
 }
 
 // ルールデータを取得（Function calling用）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getRuleData(args: any = {}): Promise<string> {
-  console.log('[getRuleData] 受信引数:', args);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getRuleData] 受信引数:', args);
+  }
   
   const rules = await fetchLatestRule();
 
@@ -102,14 +116,19 @@ export async function getRuleData(args: any = {}): Promise<string> {
   }
   
   const result = `シフト管理ルール:\n${rulesText}`;
-  console.log('[getRuleData] 結果取得完了');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getRuleData] 結果取得完了');
+  }
   
   return result;
 }
 
 // シフトデータを編集（Function calling用）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function editShiftData(args: any): Promise<string> {
-  console.log('[editShiftData] 受信引数:', args);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[editShiftData] 受信引数:', args);
+  }
   
   // パラメータの存在チェック
   if (!args || typeof args !== 'object') {
@@ -123,13 +142,15 @@ export async function editShiftData(args: any): Promise<string> {
   const startTime = args.startTime;
   const endTime = args.endTime;
   
-  console.log('[editShiftData] 分解後パラメータ:', {
-    date,
-    action,
-    userId,
-    startTime,
-    endTime
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[editShiftData] 分解後パラメータ:', {
+      date,
+      action,
+      userId,
+      startTime,
+      endTime
+    });
+  }
   
   // 必須パラメータのチェック
   if (!date || !action || !userId) {
@@ -152,7 +173,9 @@ export async function editShiftData(args: any): Promise<string> {
   }
   const existingIndex = shifts[date].memberAssignments.findIndex(m => m.userId === userId);
   
-  console.log(`[editShiftData] 処理開始: ${memberName}さんの${action}処理 対象日: ${date}`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[editShiftData] 処理開始: ${memberName}さんの${action}処理 対象日: ${date}`);
+  }
   
   let result: string;
   
@@ -195,7 +218,9 @@ export async function editShiftData(args: any): Promise<string> {
   }
   await updateSchedule(schedule.scheduleId, shifts);
 
-  console.log('[editShiftData] 処理結果:', result);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[editShiftData] 処理結果:', result);
+  }
   return result;
 }
 
@@ -215,9 +240,12 @@ function formatTime(date: Date): string {
 }
 
 
-// Lineメッセージを送信するダミー関数（実際にはLine Messaging APIの呼び出しを実装します）
+// Lineメッセージを送信する関数（Line Messaging APIの呼び出し）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function shiftCallOut(args: any): Promise<string> {
-  console.log('[shiftCallOut] 受信引数:', args);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[shiftCallOut] 受信引数:', args);
+  }
   
   // パラメータの存在チェック
   if (!args || typeof args !== 'object') {
@@ -251,7 +279,9 @@ export async function shiftCallOut(args: any): Promise<string> {
     });
     return "送信に成功しました";
   } catch (error) {
-    console.error("Lineメッセージ送信失敗:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Lineメッセージ送信失敗:", error);
+    }
     // 失敗した場合もFirestoreにログを記録
     const db = getFirestore();
     try {
@@ -262,7 +292,9 @@ export async function shiftCallOut(args: any): Promise<string> {
         errorMessage: (error instanceof Error) ? error.message : "Unknown error"
       });
     } catch (logError) {
-      console.error("Lineメッセージログ記録失敗 (エラー発生時):", logError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Lineメッセージログ記録失敗 (エラー発生時):", logError);
+      }
     }
     return "LINEメッセージの送信に失敗しました。";
   }
@@ -272,8 +304,11 @@ export async function shiftCallOut(args: any): Promise<string> {
  * Firestoreに保存された最も直近のLineメッセージログを取得する。
  * @returns 最も新しいメッセージの文字列、または見つからない場合はnull
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getLatestShiftCallOutMessage(args: any = {}): Promise<string | null> {
-  console.log('[getLatestShiftCallOutMessage] 受信引数:', args);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[getLatestShiftCallOutMessage] 受信引数:', args);
+  }
   
   // パラメータの存在チェック
   if (!args || typeof args !== 'object') {
@@ -292,11 +327,15 @@ export async function getLatestShiftCallOutMessage(args: any = {}): Promise<stri
       const latestMessageDoc = querySnapshot.docs[0];
       return latestMessageDoc.data().message as string;
     } else {
-      console.log("Lineメッセージログが見つかりませんでした。");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Lineメッセージログが見つかりませんでした。");
+      }
       return "Lineメッセージログが見つかりませんでした。";
     }
   } catch (error) {
-    console.error("最新のLineメッセージログ取得失敗:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("最新のLineメッセージログ取得失敗:", error);
+    }
     return "最新のLineメッセージログ取得失敗";
   }
 }

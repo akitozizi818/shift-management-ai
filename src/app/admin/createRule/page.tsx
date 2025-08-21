@@ -85,7 +85,9 @@ function Page() {
             setRules(rulesFromFirestore);
             setIsLoading(false);
         }, (error) => {
-            console.error("データの取得に失敗しました:", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("データの取得に失敗しました:", error);
+            }
             setIsLoading(false);
         });
         return () => unsubscribe();
@@ -131,7 +133,9 @@ function Page() {
                 });
             }
         } catch (error) {
-            console.error("ルールの保存に失敗しました:", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("ルールの保存に失敗しました:", error);
+            }
             alert("エラーが発生しました。コンソールを確認してください。");
         }
         handleCloseModal();
@@ -143,7 +147,9 @@ function Page() {
                 const ruleDocRef = doc(db, 'rules', idToDelete);
                 await deleteDoc(ruleDocRef);
             } catch (error) {
-                console.error("ルールの削除に失敗しました:", error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error("ルールの削除に失敗しました:", error);
+                }
                 alert("エラーが発生しました。コンソールを確認してください。");
             }
         }
@@ -217,7 +223,7 @@ function Page() {
                                                 <button style={ruleEditButtonStyle} onClick={() => handleEditClick(rule)}>
                                                     編集
                                                 </button>
-                                                <button style={ruleDeleteButtonStyle} onClick={() => handleDeleteRule(rule.id)}>
+                                                <button style={ruleDeleteButtonStyle} onClick={() => void handleDeleteRule(rule.id)}>
                                                     削除
                                                 </button>
                                             </div>
@@ -233,7 +239,7 @@ function Page() {
             <RuleModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
-                onSave={handleSaveRule}
+                onSave={(ruleData) => void handleSaveRule(ruleData)}
                 existingRule={editingRule}
             />
         </div>

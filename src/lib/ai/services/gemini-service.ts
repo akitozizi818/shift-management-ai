@@ -8,15 +8,19 @@ import {
   ChatHistoryEntry,
   GeminiHistoryPart // GeminiHistoryPartもインポート
 } from '../../firebase/firebaseAiEngine'; 
-import { db } from '../../firebase/firebase'; // Firestoreインスタンスを初期化するためにインポート（直接使用はしないが重要）
+// Import db to initialize Firestore instance
+import '../../firebase/firebase';
 
 export class GeminiService {
   private vertexAI: VertexAI;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private model: any;
   private tools: { [key: string]: Function }; 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private toolDeclarations: any[]; // ツール宣言を保持するプロパティを追加
   private maxFunctionCalls: number = 10; // 最大連続実行回数（無限ループ防止）
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(toolDeclarations: any[], availableFunctions: { [key: string]: Function }, systemInstruction: string) {
     this.vertexAI = new VertexAI({
       project: process.env.VERTEX_AI_PROJECT_ID!,
@@ -46,7 +50,10 @@ export class GeminiService {
     try {
       // 1. ユーザーの過去の会話履歴をFirestoreから取得
       const loadedHistory: ChatHistoryEntry[] = await getChatHistory(userId);
-      console.log(`[システム] Firestoreからロードした過去の会話履歴 (${loadedHistory.length}件):`, JSON.stringify(loadedHistory));
+      // Debug: Loaded chat history
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[システム] Firestoreからロードした過去の会話履歴 (${loadedHistory.length}件):`, JSON.stringify(loadedHistory));
+      }
 
       // 2. 過去の履歴とツール定義を使って新しいチャットセッションを開始
       const chat = this.model.startChat({
@@ -77,7 +84,9 @@ export class GeminiService {
       // 連続してfunction callingが必要な場合のループ処理
       while (this.hasFunctionCall(result.response) && functionCallCount < this.maxFunctionCalls) {
         functionCallCount++;
-        console.log(`[システム] Function call ${functionCallCount}回目を実行中...`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[システム] Function call ${functionCallCount}回目を実行中...`);
+        }
 
         // Function Callを実行し、その結果をGeminiに返す
         const functionResponses = await this.executeFunctionCalls(userId, result.response); 
@@ -95,7 +104,10 @@ export class GeminiService {
 
       // 最終的なテキスト応答を抽出
       const aiResponseText = this.extractTextResponse(result.response);
-      console.log(`[システム] 最終的なAI応答: ${aiResponseText}`);
+      // Debug: Final AI response
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[システム] 最終的なAI応答: ${aiResponseText}`);
+      }
 
       return aiResponseText;
 
@@ -108,6 +120,7 @@ export class GeminiService {
   /**
    * レスポンスからparts配列を安全に取得
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private getResponseParts(response: any): GeminiHistoryPart[] {
     if (!response?.candidates?.[0]?.content?.parts) {
       return [];
@@ -118,8 +131,10 @@ export class GeminiService {
   /**
    * レスポンスにfunction callが含まれているかチェック
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private hasFunctionCall(response: any): boolean {
     const parts = this.getResponseParts(response);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return parts.some((part: any) => part?.functionCall);
   }
 
@@ -130,7 +145,9 @@ export class GeminiService {
    * @param response - Gemini APIからのレスポンスオブジェクト
    * @returns 実行結果の配列（Geminiに返す形式）
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async executeFunctionCalls(userId: string, response: any): Promise<any[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const functionResponses: any[] = [];
     const parts = this.getResponseParts(response);
 
@@ -143,11 +160,15 @@ export class GeminiService {
         const functionName = functionCall.name;
         const args = functionCall.args;
 
-        console.log(`[システム] Geminiがツール '${functionName}' の呼び出しを要求。['${i}']引数:`, args);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[システム] Geminiがツール '${functionName}' の呼び出しを要求。['${i}']引数:`, args);
+        }
         
         // 同じ関数名が既にこのサイクルで実行済みであればスキップ
         if (executedFunctionNames.has(functionName)) {
-            console.log(`[システム] ツール '${functionName}' は既に実行済みのため、スキップします。(partsインデックス: ${i})`);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`[システム] ツール '${functionName}' は既に実行済みのため、スキップします。(partsインデックス: ${i})`);
+            }
             functionResponses.push({
               functionResponse: {
                 name: functionName,
@@ -161,7 +182,9 @@ export class GeminiService {
           try {
             // ツール実行
             const toolResponse = await this.tools[functionName](args);
-            console.log(`[システム] ツール '${functionName}' 実行結果:`, toolResponse);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`[システム] ツール '${functionName}' 実行結果:`, toolResponse);
+            }
 
     
             // Geminiに返すFunction Responseを構築
@@ -188,7 +211,9 @@ export class GeminiService {
             });
           }
         } else {
-          console.warn(`[システム] 不明なツール呼び出しが要求されました: ${functionName}`);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[システム] 不明なツール呼び出しが要求されました: ${functionName}`);
+          }
           // 不明なツールのエラーもGeminiに伝える
           functionResponses.push({
             functionResponse: {
@@ -207,6 +232,7 @@ export class GeminiService {
   /**
    * 最終的なテキストレスポンスを抽出
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private extractTextResponse(response: any): string {
     const parts = this.getResponseParts(response);
     

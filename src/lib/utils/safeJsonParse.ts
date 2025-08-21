@@ -1,5 +1,6 @@
 // src/lib/utils/safeJsonParse.ts
-export function safeJsonParse(src: string): any {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+export function safeJsonParse<T = unknown>(src: string): T {
   // 0) BOM・ゼロ幅スペースを除去
   let txt = src.replace(/\uFEFF|[\u200B-\u200D]/g, "");
 

@@ -1,79 +1,36 @@
 version: '3.8'
 
 services:
-  # Firebase Emulator Service
-  firebase-emulator:
+  # Next.js Application Service (本番環境ベース)
+  app:
     build:
       context: .
       dockerfile: Dockerfile.dev
-      target: firebase-emulator
-    container_name: firebase-emulator
-    ports:
-      - "4000:4000"  # Emulator UI
-      - "8080:8080"  # Firestore
-      - "9099:9099"  # Auth
-    volumes:
-      - .:/app
-      - firebase_data:/app/.firebase
-    env_file:
-      - app.deploy.env
-    # environment:
-    #   - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-    #   - FIREBASE_TOKEN=${FIREBASE_TOKEN}
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-  # ngrok Service（公式Dockerイメージを使用）
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: ngrok-tunnel
-    env_file:
-      - app.deploy.env
-    # environment:
-    #   - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    volumes:
-      - ./ngrok.yml:/etc/ngrok.yml:ro
-    command: ["start", "--all", "--config", "/etc/ngrok.yml"]
-    networks:
-      - app-network
-    depends_on:
-      app-dev:
-        condition: service_started
-    restart: unless-stopped
-  # Next.js Application Service
-  app-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      target: app-dev
+      target: runner
     container_name: shift-management-ai-dev
     ports:
       - "3000:3000"
     volumes:
+      # 開発用：ソースコードをマウント（ホットリロード）
       - .:/app
       - /app/node_modules
-      - /app/.next
+      # .nextディレクトリは除外してコンテナ内で作成
     env_file:
-      - app.deploy.env
-    # environment:
-    #   - NODE_ENV=${NODE_ENV}
-    #   - FIRESTORE_EMULATOR_HOST=${FIRESTORE_EMULATOR_HOST}
-    #   - FIREBASE_AUTH_EMULATOR_HOST=${FIREBASE_AUTH_EMULATOR_HOST}
-    #   - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-    #   - NEXT_TELEMETRY_DISABLED=1
-    depends_on:
-      firebase-emulator:
-        condition: service_healthy
+      - .env
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+    restart: unless-stopped
     networks:
       - app-network
-
-volumes:
-  firebase_data:
+    # ヘルスチェック
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   app-network:

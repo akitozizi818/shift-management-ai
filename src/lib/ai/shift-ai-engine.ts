@@ -1,6 +1,5 @@
 // src/lib/ai/shift-ai-engine.ts
 import { GeminiService } from './services/gemini-service';
-import { rootCertificates } from 'tls';
 import { getCurrentDate, getShiftData, getRuleData, editShiftData,shiftCallOut,getLatestShiftCallOutMessage } from './shift-utils';
 import { clearUserChatHistory } from '../firebase/firebaseAiEngine'; 
 import { getSystemPrompt } from '../firebase/firebaseAiEngine'; 

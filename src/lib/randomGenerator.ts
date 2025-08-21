@@ -22,7 +22,10 @@ export async function generateRandomSchedule(year: number, month: number): Promi
   }
 
   const snap = await getDocs(collection(db, "users"));
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as {
+  const list = snap.docs.map((d) => ({ 
+    id: d.id, 
+    ...(d.data() as { role: string; [key: string]: unknown }) 
+  })) as {
     id: string;
     role: string;
   }[];

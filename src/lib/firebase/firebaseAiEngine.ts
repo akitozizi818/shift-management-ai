@@ -8,10 +8,12 @@ export interface GeminiHistoryPart {
   text?: string;
   functionCall?: {
     name: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     args: { [key: string]: any; };
   };
   functionResponse?: {
     name: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     response: { [key: string]: any; }; // resultやerrorなどを含む
   };
 }
@@ -19,6 +21,7 @@ export interface GeminiHistoryPart {
 export interface ChatHistoryEntry {
   role: 'user' | 'model' | 'function'; 
   parts: GeminiHistoryPart[]; // parts配列を直接保存できるようにする
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   timestamp: any; 
 }
 
@@ -60,6 +63,7 @@ export async function getChatHistory(
 
   // (3) 収集した履歴を最も古いものから並べ替える (古いもの → 新しいもの)
   // AIモデルが会話履歴を古い順に期待するため、ここで並べ替え直す
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   filteredHistory.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
   
   return filteredHistory;
@@ -98,6 +102,7 @@ export async function addAiResponseToHistory(userId: string, aiResponseParts: Ge
  * @param userId - ユーザーID
  * @param functionResponses - 実行された全ての関数応答の配列 (Geminiに返す形式と同じ)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addFunctionResponsesToHistory(userId: string, functionResponses: { functionResponse: { name: string; response: { [key: string]: any; }; }; }[]): Promise<void> {
   const chatHistoryRef = collection(db, `users/${userId}/chatHistory`);
   
@@ -126,7 +131,9 @@ export async function clearUserChatHistory(userId: string): Promise<void> {
     batch.delete(doc.ref);
   });
   await batch.commit();
-  console.log(`User ${userId}'s chat history cleared from Firestore.`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`User ${userId}'s chat history cleared from Firestore.`);
+  }
 }
 
 export async function getSystemPrompt(promptKey: string): Promise<string | null> {
@@ -140,10 +147,14 @@ export async function getSystemPrompt(promptKey: string): Promise<string | null>
         return data[promptKey] as string;
       }
     }
-    console.warn(`Firestoreにプロンプトキー '${promptKey}' が見つかりませんでした。`);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Firestoreにプロンプトキー '${promptKey}' が見つかりませんでした。`);
+    }
     return null;
   } catch (error) {
-    console.error('システムプロンプトの取得中にエラーが発生しました:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('システムプロンプトの取得中にエラーが発生しました:', error);
+    }
     return null;
   }
 }

@@ -15,12 +15,9 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type {
     WebhookRequestBody,
-    WebhookEvent,
-    FollowEvent,
-    MessageEvent,
-    TextMessage,
 } from '@line/bot-sdk'
-import { replyLineMessage } from '@/lib/line/client';
+// Import replyLineMessage for potential future use
+// import { replyLineMessage } from '@/lib/line/client';
 import { LineMessageService } from '@/lib/services/line-message-service';
 import { ShiftManagementAI } from '@/lib/ai/shift-ai-engine'; // ShiftManagementAIをインポート
 
@@ -33,18 +30,24 @@ let initializationPromise: Promise<void> | null = null;
 async function getInitializedAiClient(): Promise<ShiftManagementAI> {
   // 既に初期化済みのインスタンスがあればそれを返す（ウォームスタート）
   if (initializedAiClient) {
-    console.log("AIクライアントは既に初期化済みです。(ウォームスタート)");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("AIクライアントは既に初期化済みです。(ウォームスタート)");
+    }
     return initializedAiClient;
   }
 
   // 初期化がまだ開始されていない場合のみ、初期化処理を実行するプロミスを作成
   if (!initializationPromise) {
-    console.log("AIクライアントの初期化を開始します。(コールドスタート)");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("AIクライアントの初期化を開始します。(コールドスタート)");
+    }
     initializationPromise = (async () => {
       const ai = new ShiftManagementAI();
       await ai.init(); // ここでFirestoreからシステムプロンプトをロード
       initializedAiClient = ai; // 初期化完了後にインスタンスをセット
-      console.log("ShiftManagementAI instance initialized (cold start completed).");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("ShiftManagementAI instance initialized (cold start completed).");
+      }
     })();
   }
 
@@ -59,31 +62,43 @@ async function getInitializedAiClient(): Promise<ShiftManagementAI> {
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('LINE Webhook リクエスト受信');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('LINE Webhook リクエスト受信');
+    }
     let body: string;
     try {
       body = await request.text();
-      console.log('受信したボディサイズ:', body.length);
-      console.log('受信したボディの最初の100文字:', body.substring(0, 100));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('受信したボディサイズ:', body.length);
+        console.log('受信したボディの最初の100文字:', body.substring(0, 100));
+      }
     } catch (error) {
-      console.error('リクエストボディの読み取りエラー:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('リクエストボディの読み取りエラー:', error);
+      }
       return NextResponse.json({ error: 'Failed to read request body' }, { status: 400 });
     }
 
     // 署名検証 ===========================================================================
     const signature = request.headers.get('x-line-signature');
-    console.log('X-Line-Signature:', signature)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('X-Line-Signature:', signature);
+    }
 
     if (!verifySignature(body, signature)) {
       // 署名が不正な場合は, 401 Unauthorize エラーを返す.
-      console.warn('不正な署名を持つリクエストを拒否しました.');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('不正な署名を持つリクエストを拒否しました.');
+      }
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
     // ===================================================================================
 
     // 空のボディをチェック
     if (!body || body.trim() === '') {
-      console.warn('空のリクエストボディを受信しました');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('空のリクエストボディを受信しました');
+      }
       return NextResponse.json({ error: 'Empty request body' }, { status: 400 });
     }
 
@@ -91,13 +106,17 @@ export async function POST(request: NextRequest) {
     let webhookBody: WebhookRequestBody;
     try {
       webhookBody = JSON.parse(body);
-      console.log('JSONパース成功:', {
-        eventsCount: webhookBody.events?.length || 0,
-        destination: webhookBody.destination
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('JSONパース成功:', {
+          eventsCount: webhookBody.events?.length || 0,
+          destination: webhookBody.destination
+        });
+      }
     } catch (parseError) {
-      console.error('JSON解析エラー:', parseError);
-      console.error('パースしようとしたボディ:', body);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('JSON解析エラー:', parseError);
+        console.error('パースしようとしたボディ:', body);
+      }
       return NextResponse.json({ 
         error: 'Invalid JSON format',
         details: parseError instanceof Error ? parseError.message : 'Unknown parse error'
@@ -106,7 +125,9 @@ export async function POST(request: NextRequest) {
 
     // webhookBodyの構造をチェック
     if (!webhookBody || !Array.isArray(webhookBody.events)) {
-      console.error('不正なWebhookボディ構造:', webhookBody);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('不正なWebhookボディ構造:', webhookBody);
+      }
       return NextResponse.json({ error: 'Invalid webhook structure' }, { status: 400 });
     }
 
@@ -114,11 +135,15 @@ export async function POST(request: NextRequest) {
     for (const event of webhookBody.events) {
       if (event.source.type === 'user') {
         const userId = event.source.userId;
-        console.log('User sent a message! User ID:', userId, 'Event type:', event.type);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('User sent a message! User ID:', userId, 'Event type:', event.type);
+        }
       } else if (event.source.type === 'group') {
         // グループIDをログに出力
         const groupId = event.source.groupId;
-        console.log('Event from group! Group ID:', groupId, 'Event type:', event.type);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Event from group! Group ID:', groupId, 'Event type:', event.type);
+        }
       }
     }
 
@@ -130,18 +155,22 @@ export async function POST(request: NextRequest) {
       const messageService = new LineMessageService(aiClient);
       await messageService.handleWebhookEvents(webhookBody.events);
     } catch (serviceError) {
-      console.error('メッセージサービスエラー:', serviceError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('メッセージサービスエラー:', serviceError);
+      }
       // サービスエラーが発生してもWebhookは成功として返す
     }
 
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('LINE Webhook ERROR:', error);
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('LINE Webhook ERROR:', error);
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
     return NextResponse.json({ 
       error: 'Internal server error',
@@ -160,7 +189,9 @@ const verifySignature = (body: string, signature: string | null): boolean => {
   const channelSecret = process.env.LINE_CHANNEL_SECRET;
 
   if (!channelSecret || !signature) {
-    console.error('Channel Secretまたは署名が見つかりません。');
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Channel Secretまたは署名が見つかりません。');
+    }
     return false;
   }
 
