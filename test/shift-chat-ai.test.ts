@@ -71,12 +71,8 @@ async function checkChatHistory() {
   // 簡単なメッセージを送信
   await shiftAI.handleMemberMessage('田中', 'こんにちは', 'U001');
   
-  // 履歴を確認
-  const history = await shiftAI.getChatHistory();
-  console.log('チャット履歴:', JSON.stringify(history, null, 2));
-  
-  // 履歴をクリア
-  await shiftAI.clearChatHistory();
+  // 履歴をクリア（userIdが必要）
+  await shiftAI.clearChatHistory('U001');
   console.log('履歴クリア完了');
 }
 

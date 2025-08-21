@@ -59,3 +59,10 @@ docker-compose.override.yml
 *.tar.gz
 .cache/
 credentials/
+
+*.claude
+.claude/
+.claude/settings.local.json
+
+# TypeScript
+*.tsbuildinfo
