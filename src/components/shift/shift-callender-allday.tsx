@@ -1,3 +1,4 @@
+//src/components/shift/shift-callender-allday.tsx
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -109,11 +110,11 @@ export default function ShiftCalendar({
     const monthEnd = endOfMonth(monthStart);
     const weekStart = startOfWeek(monthStart, { weekStartsOn: 0 }); // 日曜開始
 
-    const rows: JSX.Element[] = [];
+    const rows: React.ReactElement[] = [];
     let day = weekStart;
 
     while (day <= monthEnd || rows.length < 6) {
-      const days: JSX.Element[] = [];
+      const days: React.ReactElement[] = [];
       for (let i = 0; i < 7; i++) {
         const dateStr = ymd(day);
         const assignments =

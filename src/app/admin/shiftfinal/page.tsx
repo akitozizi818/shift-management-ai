@@ -112,7 +112,7 @@ export default function FinalSchedulePage() {
           onClose={() => setModalOpen(false)}
           selectedDate={selectedDate}
           dayAssignments={sortedAssignments}
-          setDayAssignments={persist}
+          setDayAssignments={setDayAssignments}
         />
       )}
     </div>

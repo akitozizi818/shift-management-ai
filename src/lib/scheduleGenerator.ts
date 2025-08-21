@@ -1,3 +1,4 @@
+//src/lib/scheduleGenerator.ts
 import {  fetchActiveUsers } from "@/lib/firebase/firebaseUsers";
 import { generateShiftWithGemini } from "@/lib/geminiClient";
 import { generateRandomSchedule } from "@/lib/randomGenerator";
@@ -5,10 +6,31 @@ import { v4 as uuid } from "uuid";
 import type { Schedule, ShiftRequest, Rule, User } from "@/types/shift";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
-import serviceAccount from "credentials/firebase-admin-key.json";
+// import serviceAccount from "credentials/firebase-admin-key.json";
 import type { ServiceAccount } from "firebase-admin";
 import { fetchShiftRequestsByMonth } from "./firebase/firebaseSchedule";
 
+// Firebase Admin SDKのサービスアカウントキーを環境変数から取得する
+// 環境変数名は 'FIREBASE_SERVICE_ACCOUNT_KEY_BASE64' など、分かりやすいものに設定します。
+const serviceAccountKeyBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
+let serviceAccount: ServiceAccount;
+if (serviceAccountKeyBase64) {
+  try {
+    // Base64エンコードされたJSON文字列をデコードし、JSONとしてパース
+    const decodedKey = Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf8');
+    serviceAccount = JSON.parse(decodedKey);
+  } catch (error) {
+    console.error('❌ 環境変数からFirebaseサービスアカウントキーのパースに失敗しました:', error);
+    // パース失敗は致命的なエラーなので、アプリケーションの起動を停止します
+    throw new Error('Firebaseサービスアカウントキーの環境変数が不正です。');
+  }
+} else {
+  // 環境変数が設定されていない場合の処理（本番環境ではエラーとする）
+  console.error('❌ 環境変数 FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 が設定されていません。');
+  // 開発環境では、ローカルファイルから読み込むなどのフォールバックを検討できますが、
+  // 本番ビルドでは必須のエラーとします。
+  throw new Error('Firebaseサービスアカウントキーは環境変数として設定する必要があります。');
+}
 // Firebase Admin 初期化
 if (getApps().length === 0) {
   initializeApp({

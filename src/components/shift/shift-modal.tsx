@@ -1,3 +1,4 @@
+//src/components/shift/shift-modal.tsx
 "use client";
 
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
@@ -12,16 +13,18 @@ import { fetchActiveUsers, UserDoc } from "@/lib/firebase/firebaseUsers";
 
 import type { memberAssignment, Role, ShiftRequest } from "@/types/shift";
 import { usePathname } from "next/navigation";
-type SetDayAssignments =
-  | React.Dispatch<React.SetStateAction<Record<string, memberAssignment[]>>>
-  | ((map: Record<string, memberAssignment[]>) => void);
+// type SetDayAssignments =
+//   | React.Dispatch<React.SetStateAction<Record<string, memberAssignment[]>>>
+//   | ((map: Record<string, memberAssignment[]>) => void);
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date;
   dayAssignments: Record<string, memberAssignment[]>;
-  setDayAssignments: SetDayAssignments;
+  // setDayAssignments プロパティの型を標準の React.Dispatch で定義します。
+  setDayAssignments: React.Dispatch<React.SetStateAction<Record<string, memberAssignment[]>>>;
+
 }
 /* ---------- helpers ---------- */
 const pad = (n: number) => n.toString().padStart(2, "0");
